@@ -67,7 +67,7 @@ colnames(ex1) <- c("id","start","stop","st.stage","stage")
 ex1 <- data.frame(id=ex1[,1],start=ex1[,2],stop=ex1[,3],st.stage=ex1[,4],stage=ex1[,5])
 
 
-## inputting nodes & edgest of the tree structure
+## inputting nodes & edges of the tree structure
 Nodes <- c("1","2","3") # states in MSM
 Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("3")),
            "3"=list(edges=NULL)) #allowed transitions between states

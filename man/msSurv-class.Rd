@@ -91,37 +91,37 @@ Objects can be created by calls of the form \code{new("msSurv", ...)}.
           ie: "11".}
 	 \item{\code{CI=TRUE}}{A logical argument to specify whether
 	   pointwise confidence intervals should be plotted.  If the
-      user specifies CI=FALSE, only the estimates are plotted.  If the user
-      specifies CI=TRUE, plots of each estimate and its corresponding 
-      confidence intervals are created. The default is TRUE. }
+	   user specifies CI=FALSE, only the estimates are plotted.  If the user
+	   specifies CI=TRUE, plots of each estimate and its corresponding 
+	   confidence intervals are created. The default is TRUE. }
 	 \item{\code{ci.level=0.95}}{Confidence level.  Default is 0.95.}
 	 \item{\code{ci.trans="linear"}}{Transformation applied to
 	     confidence intervals. Possible choices are "linear", "log",
 	     "log-log", and "cloglog".  Default is "linear".}
 	 \item{\code{plot.type="stateocc"}}{Determines the type of estimate to be
-      plotted.  User may specify "transprob" for transition probability
-      plots, "stateocc" for state occupation probability plots, "entry.d" for state
-      entry time distributions, or "exit.d" for state exit time distributions.  "stateocc" is the default.
-      Note: CIs do not plot for state entry/exit time distributions.}
+	   plotted.  User may specify "transprob" for transition probability
+	   plots, "stateocc" for state occupation probability plots, "entry.d" for state
+	   entry time distributions, or "exit.d" for state exit time distributions.  "stateocc" is the default.
+	 }
 
          \item{\code{\dots}}{Further arguments}
-
+	 
      }}
 
-    \item{print}{\code{signature(x = "msSurv")}: Print function for
-      "msSurv" objects.
-
-      Additional arguments:
-      \describe{
-	\item{\code{covar=FALSE}}{A logical argument to specify whether
-	  to print the variance-covariance estimates.  Default is FALSE.}
+     \item{print}{\code{signature(x = "msSurv")}: Print function for
+       "msSurv" objects.
+       
+       Additional arguments:
+       \describe{
+	 \item{\code{covar=FALSE}}{A logical argument to specify whether
+	   to print the variance-covariance estimates.  Default is FALSE.}
 	\item{\code{ee.distn=TRUE}}{A logical argument to specify
-      whether to print the entry and exit time distributions.  Default
-      is TRUE.}
-
-	}
+	  whether to print the entry and exit time distributions.  Default
+	  is TRUE.}
+	
+      }
     }
-
+    
     \item{summary}{\code{signature(object = "msSurv")}: Summary function
       for "msSurv" objects.
 
@@ -132,7 +132,7 @@ Objects can be created by calls of the form \code{new("msSurv", ...)}.
       \item{\code{all=FALSE}}{Logical argument to determine whether
 	summary information should be displayed for all event times or
 	only for the key percentile time points (IQR).  Default is FALSE
-	where all=FALSE corresponds to only the IQR of event times being
+	where \code{all=FALSE} corresponds to only the IQR of event times being
 	displayed in the summary output.}
       \item{\code{ci.fun="linear"}}{Transformation applied to
 	     confidence intervals. Possible choices are "linear", "log",
@@ -160,14 +160,24 @@ Objects can be created by calls of the form \code{new("msSurv", ...)}.
     Somnath Datta <somnath.datta@louisville.edu>
 }
 \note{
-    This function prints estimates of state occupation probabilities for each event time and a matrix giving the estimates of transition probability P(0,t).
+    This function prints estimates of state occupation probabilities for
+    each event time and a matrix giving the estimates of transition
+    probability P(0,t). 
 
-    Summary information for the state occupation probabilities include the event time, estimate of state occupation probability, variance estimate, and lower and upper confidence intervals, and state entry and exit time distributions for each state.
+    Summary information for the state occupation probabilities include
+    the event time, estimate of state occupation probability, variance
+    estimate, and lower and upper confidence intervals, and state entry
+    and exit time distributions for each state. 
 
-    Summary information for the transition probabilities include the event time, estimate of transition probability,
-    variance stimate, lower and upper confidence intervals and the number at risk using methods in Andersen et al. (1993) ("n.risk") and Datta & Satten (2001).  For transitions into a different state,
-    the number of events is also provided according to both methods previously described.  For transitions into the same state, the number remaining after the event time is
-    also provided.
+    Summary information for the transition probabilities include the
+    event time, estimate of transition probability, 
+    variance stimate, lower and upper confidence intervals and the
+    number at risk using methods in Andersen et al. (1993) ("n.risk")
+    and Datta & Satten (2001) ("n.risk.K").  For transitions into a different state, 
+    the number of events is also provided according to both methods
+    previously described.  For transitions into the same state, the
+    number remaining after the event time is 
+    also provided. 
 }
 
 
@@ -188,7 +198,7 @@ colnames(ex1) <- c("id","start","stop","st.stage","stage")
 ex1 <- data.frame(id=ex1[,1],start=ex1[,2],stop=ex1[,3],st.stage=ex1[,4],stage=ex1[,5])
 
 
-## inputting nodes & edgest of the tree structure
+## inputting nodes & edges of the tree structure
 Nodes <- c("1","2","3") # states in MSM
 Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("3")),
            "3"=list(edges=NULL)) #allowed transitions between states

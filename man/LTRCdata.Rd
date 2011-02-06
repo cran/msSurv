@@ -3,13 +3,8 @@
 \docType{data}
 \title{Simulated Left Truncated, Right Censored Data Set for a Irreversible Illness-Death Model}
 \description{
- We consider an irreversible three-state illness-death  model with data subject to
-independent right censoring and left truncation.  We simulated a data set of 1000 individuals 
-starting in state 1 at time 0.  Individuals remain in state 1 until they
-transition to the transient state 2 (ill) or the terminal state 3
-(death).  Individuals in state 2 remain there until they transition to
-the terminal state 3 (death).  All times were rounded to the fourth decimal place for clarity of presentation.
-
+Simulated data from an irreversible three-state illness-death  model with data subject to
+independent right censoring and left truncation. 
 }
 \usage{data(LTRCdata)}
 \format{
@@ -22,14 +17,40 @@ the terminal state 3 (death).  All times were rounded to the fourth decimal plac
     \item{\code{stage}}{State transitioning TO}
   }
 }
+
+\details{
+We consider an irreversible three-state illness-death  model with data subject to
+independent right censoring and left truncation.  A data
+set of 1000 individuals  starting in state 1 at time 0 was simulated.
+Individuals remain in state 1 until they
+transition to the transient state 2 (ill) or the terminal state 3
+(death).  Individuals in state 2 remain there until they transition to
+the terminal state 3 (death).  All times were rounded to the fourth
+decimal place for clarity of presentation.
+
+For further details concerning the simulation, please see the package vignette.
+}
+
 \examples{
 data(LTRCdata)
-}
-\details{
+
+####################################################################
+##               Code used to generate data                       ##
+####################################################################
+
+## Specifying the tree structure for the simulation
+Nodes <- c("1","2","3") #states possible in MSM
+Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("3")),
+           "3"=list(edges=NULL)) #transitions from each state
+
+treeobj2 <- new("graphNEL",nodes=Nodes,edgeL=Edges,edgemode="directed")
+
+## Simulating the data
 set.seed(123)
 n<-1000
 censor <- round(rlnorm(n, meanlog=-0.5, sdlog=2),digits=4)
 
+## Left truncation times are mixture of 80% lognormal, 20% LT time=0
 p1 <- n*0.8
 p2 <- n*0.2
 left.p1 <- round(rlnorm(p1, meanlog=-0.5, sdlog=2),digits=4) #start time
@@ -38,7 +59,6 @@ left<-c(left.p1,left.p2)
 ill <- round(rweibull(n,2),digits=4)
 death <- round(rweibull(n,2),digits=4)
 
-
 max.tran <- pmax(death,censor)
 hidden <- which(max.tran < left | death < left | censor < left) #those who are never visible to investigator
 
@@ -46,7 +66,6 @@ present <- which(left < censor & left < death & left<ill)  #present in state 1
 illstart <- which(ill < left & left < censor & left < death) #present in study but starts in "ill"
 
 ###All present @ any time is which(left < censor & left < death)
-
 
 x <- cbind(left,death,censor,ill)
 
@@ -76,15 +95,8 @@ if(length(illstart)>0){
 if(length(illstart)==0)	data <- rbind(data1,data2)
 
 LTRCdata<-with(data, data[order(stop), ])
-}
-\note{
-The tree structure for this simulation may be specified using
 
-Nodes <- c("1","2","3") #states possible in MSM
-Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("3")),
-           "3"=list(edges=NULL)) #transitions from each state
-
-treeobj2 <- new("graphNEL",nodes=Nodes,edgeL=Edges,edgemode="directed")
 }
+
 
 \keyword{datasets}

@@ -44,17 +44,22 @@ Pst <- function(object,s=0,t="last",deci=4,covar=FALSE){
 	} #end of for idx
     } #end of if var 
 
-#	list(P.s.t=cum.prod)
 
 	cat(paste("Estimate of P(",s,",",t,")\n", sep = ""))
        	print(round(cum.prod,digits=deci))
-#	print(red.all.ajs[,,idx])
+##	print(red.all.ajs[,,idx])
        	cat("\n")
 
-       if (!is.null(object@out) & covar == TRUE) {
+       if (!is.null(object@out) & covar == TRUE) {  ## why do we need 1st condition?
            cat(paste("Estimate of cov(P(",s,",",t,"))\n", sep = ""))
            print(round(var.Pst[,,max(idx)],digits=deci))
        }
+
+    if (covar == FALSE) {
+      return(invisible(list(Pst=cum.prod)))
+    } else {
+      return(invisible(list(Pst=cum.prod, var.Pst=var.Pst[,,max(idx)])))
+    }
 
 
 }
@@ -268,7 +273,7 @@ msSurv <- function(Data,tree,cens.type="ind",LT=FALSE,d.var=FALSE,B=200,start.st
 				Ys=cp.red$Ys,ps=stateoccfn$ps,all.ajs=stateoccfn$all.ajs,Fs=ent.exit$Fs,Gs=ent.exit$Gs,
 				out=bsvar$out,cov.p=bsvar$cov.p,sum.dNs=cp.red$sum.dNs, dNs.K=cp.red$dNs.K, Ys.K=cp.red$Ys.K,
 				sum.dNs.K=cp.red$sum.dNs.K,cov.dA=variances$varcov,all.I_dA=stateoccfn$all.I_dA,
-				Fs.var=bsvar$var.Fs, Gs.var=bsvar$var.Gs)}
+				Fs.var=bsvar$Fs.var, Gs.var=bsvar$Gs.var)}
    
 
   if(cens.type=="dep"){
@@ -277,7 +282,7 @@ msSurv <- function(Data,tree,cens.type="ind",LT=FALSE,d.var=FALSE,B=200,start.st
 				Ys=cp.red$Ys,ps=stateoccfn$ps,all.ajs=stateoccfn$all.ajs,Fs=ent.exit$Fs,Gs=ent.exit$Gs,
 				out=bsvar$out,cov.p=bsvar$cov.p,sum.dNs=cp.red$sum.dNs, dNs.K=cp.red$dNs.K, Ys.K=cp.red$Ys.K,
 				sum.dNs.K=cp.red$sum.dNs.K,cov.dA=variances$varcov,all.I_dA=stateoccfn$all.I_dA,
-				Fs.var=bsvar$var.Fs,Gs.var=bsvar$var.Gs)
+				Fs.var=bsvar$Fs.var,Gs.var=bsvar$Gs.var)
 	}
    
 

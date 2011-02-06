@@ -6,7 +6,8 @@ Computation of P(s,t)
 }
 \description{
   This function calculates the transition probability matrix between any two values s and t and
-  then prints it.  The function also calculates and prints the var(P(s,t)) matrix if the user specifies.
+  then prints it.  The function also
+  calculates and prints the var(P(s,t)) matrix if the user specifies.  Values are returned invisibly.
 }
 \usage{
 Pst(object,s=0,t="last",deci=4,covar=FALSE)
@@ -35,8 +36,10 @@ Pst(object,s=0,t="last",deci=4,covar=FALSE)
    
 }
 \value{
-  \item{P.s.t.}{The transition probability matrix between two times s and t.
- }
+  Returned invisibly:
+  \item{Pst}{The transition probability matrix between two times s and t}
+  \item{var.Pst}{Covariance matrix for the transition probability matrix
+    between two times s and t (if \code{covar==TRUE})}
   
 }
 \references{
@@ -50,7 +53,7 @@ Pst(object,s=0,t="last",deci=4,covar=FALSE)
 }
 \note{
    If s = 0, P(0,t) yields the state occupation probabilities at time t.
-   Data should follow a Markovian model for computations to make sense.
+   Data are assumed to follow a Markovian model.
    
 }
 
@@ -69,7 +72,7 @@ colnames(ex1) <- c("id","start","stop","st.stage","stage")
 ex1 <- data.frame(id=ex1[,1],start=ex1[,2],stop=ex1[,3],st.stage=ex1[,4],stage=ex1[,5])
 
 
-## inputting nodes & edgest of the tree structure
+## inputting nodes & edges of the tree structure
 Nodes <- c("1","2","3") # states in MSM
 Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("3")),
            "3"=list(edges=NULL)) #allowed transitions between states

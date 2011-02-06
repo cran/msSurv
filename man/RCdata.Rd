@@ -3,13 +3,9 @@
 \docType{data}
 \title{Simulated Right Censored Data Set for a 5 State Model}
 \description{
-We consider a five-state progressive model with the tree
-structure.  We simulated a data set of 1000 individuals subject to independent right
-censoring with 60% of individuals starting in state 1 at time 0 and 40%
-starting in state 2.  Those in state 1 remain there until they
-transition to the transient state 2 or the terminal state 3.
-Individuals in state 2 remain there until they transition to 
-either terminal state 4 or 5.
+Simulated data from a five-state progressive model with both branching
+and tracking between states.  Possible transitions are 1->2, 1->3, 2->4,
+and 2->5, with  states 3, 4, and 5 as terminal states.  
 }
 \usage{data(RCdata)}
 \format{
@@ -21,10 +17,31 @@ either terminal state 4 or 5.
     \item{\code{stage}}{State transitioning TO}
   }
 }
+
+\details{
+We simulated a data set of 1000 individuals subject to independent right
+censoring with 60% of individuals starting in state 1 at time 0 and 40%
+starting in state 2.  Those in state 1 remain there until they
+transition to the transient state 2 or the terminal state 3.
+Individuals in state 2 remain there until they transition to 
+either terminal state 4 or 5.
+}
+
 \examples{
 data(RCdata)
-}
-\details{
+
+####################################################################
+##               Code used to generate data                       ##
+####################################################################
+
+## Specifying the tree structure for the simulation
+
+Nodes <- c("1","2","3","4","5") #states possible in MSM
+Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("4","5")),
+           "3"=list(edges=NULL),"4"=list(edges=NULL),"5"=list(edges=NULL))
+treeobj <- new("graphNEL",nodes=Nodes,edgeL=Edges,edgemode="directed")
+
+## Simulating the data
 set.seed(123)
 n <- 1000
 n1 <- 0.6*n
@@ -56,15 +73,6 @@ data2.2 <- data.frame(id=(1:n2)+length(c1), stop=tran,st.stage=2,stage=stage2)
 
 RCdata <- rbind(data1,data2,data2.2)
 
-}
-
-\note{
-The tree structure for this simulation may be specified using
-
-Nodes <- c("1","2","3","4","5") #states possible in MSM
-Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("4","5")),
-           "3"=list(edges=NULL),"4"=list(edges=NULL),"5"=list(edges=NULL))
-treeobj <- new("graphNEL",nodes=Nodes,edgeL=Edges,edgemode="directed")
 }
 
 \keyword{datasets}

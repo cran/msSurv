@@ -4,8 +4,9 @@
 Nonparametric Estimation for Multistate Models
 }
 \description{
-Function uses counting process and at risk set of event times to calculate the state occupation
-probabilities, as well as the state entry and exit time distributions.  It also calculates the
+The function uses the counting process and at risk set of event times to calculate the state occupation
+probabilities, as well as the state entry and exit time distributions,
+for a general, possibly non-Markov, model.  It also calculates the
 transition probability matrices and covariance matrices for the state occupation probabilities
 and transition probabilities.
 }
@@ -34,13 +35,16 @@ msSurv(Data, tree,cens.type="ind",LT=FALSE,d.var=FALSE,B=200,start.states)
     The number of bootstraps for dependent censored data.
 }
   \item{start.states}{
-    A vector of starting states for individuals in the data set at time 0.  The vector is automatically calculated for right censored data
-    if not specified.  For left truncated data, all individuals are assumed to be in initial state unless the user specifies differently.  
+    A vector of starting states for individuals in the data set at time
+    0.  The vector is automatically calculated for right censored data 
+    if not specified.  For left truncated data, all individuals are
+    assumed to be in the initial state at time 0 unless the user specifies
+    differently.   
 }
 }
 \details{
    Data are from a possibly non-Markovian multistate model with a directed tree
-   structure and subject to right censoring and left truncation.
+   structure and subject to right censoring and possibly left truncation.
 
    State 0 is reserved as the censoring state.
 
@@ -50,10 +54,9 @@ msSurv(Data, tree,cens.type="ind",LT=FALSE,d.var=FALSE,B=200,start.states)
    State entry and exit time distributions are calculated using state occupation
    probabilities.
 
-   For a non-Markov model, the transition probability matrices are estimates using
+   The transition probability matrices are estimates using
    the Aalen-Johansen estimator described in Andersen et al. (1993).  The transition
-   probability is the (i,j)th entry of the transitiom matrix.
-
+   probability is the (i,j)th entry of the transition matrix.
    Datta and Satten (2001) showed that the Aalen-Johansen estimator remained
    valid for non-Markov systems.
 
@@ -65,6 +68,8 @@ msSurv(Data, tree,cens.type="ind",LT=FALSE,d.var=FALSE,B=200,start.states)
 
 }
 \value{
+
+  An object of S4 class  \code{\linkS4class{msSurv}} with the following slots:
   \item{tree}{A graphNEL graph with the nodes and edges of the multistate model.}
   \item{ns}{Number of states.}
   \item{et}{Event times.}
@@ -109,7 +114,8 @@ msSurv(Data, tree,cens.type="ind",LT=FALSE,d.var=FALSE,B=200,start.states)
 
 
 \seealso{
-See the description of the plot, print, and summary methods in the help page for S4 class \code{\linkS4class{msSurv}}.
+See the description of the plot, print, and summary methods in the help
+page for S4 class \code{\linkS4class{msSurv}}.
 }
 \examples{
 ## 3-state illness-death multistate model (no left-truncation)
@@ -127,7 +133,7 @@ colnames(ex1) <- c("id","start","stop","st.stage","stage")
 ex1 <- data.frame(ex1)
 
 
-## inputting nodes & edgest of the tree structure
+## inputting nodes & edges of the tree structure
 Nodes <- c("1","2","3") # states in MSM
 Edges <- list("1"=list(edges=c("2","3")),"2"=list(edges=c("3")),
            "3"=list(edges=NULL)) #allowed transitions between states

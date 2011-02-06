@@ -575,9 +575,9 @@ BS.var <- function(Data,tree,ns,et,cens.type,B,LT,start.states){
 		Data.bs$id=bs.id #changing id column to bs.id to use functions
 		Data.bs=Data.bs[order(Data.bs$stop),] #ordered bs dataset
 
-	## Calling functions using bs dataset
+                ## Calling functions using bs dataset
 		Cens <- Add.States(tree)
-#1/26/11 - Added the LT case
+                ##1/26/11 - Added the LT case
 		  if(LT) {
 			Data.bs = LT.Data(Data.bs)
 			cp <- CP(tree,Cens$treeLT,Data.bs,Cens$nt.states.LT)
