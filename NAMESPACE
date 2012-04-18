@@ -1,4 +1,4 @@
 importFrom(graphics, plot)
 exportClasses(msSurv)
 exportMethods(plot, print, summary)
-export(msSurv,Pst,st.t,EntryExit)
+export(msSurv, Pst, SOPt, EntryExit)

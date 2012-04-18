@@ -1,51 +1,47 @@
-\name{EntryExit}
-\alias{EntryExit}
+\name{SOPt}
+\alias{SOPt}
 
 \title{
-State Entry and Exit Time Distributions at Time t
+State Occupation Probability at Time t
 }
 \description{
-  This function displays the state entry and exit time distributions at
-  time t.  The function also displays the corresponding 
-  variance estimates if the user requests them.
+  This function displays the state occupation probability at time t and
+  then prints it.  The function also displays the corresponding
+  variance if the user specifies.
 }
 \usage{
-EntryExit(object, t="last", deci=4, covar=FALSE, norm=TRUE)
+SOPt(object, t="last", deci=4, covar=FALSE)
 }
 
 \arguments{
   \item{object}{
     A msSurv object.
-  }
+}
   \item{t}{
-    The time to find state entry/exit distributions.  Default is "last" which is the highest (or "last") event time.
-  }
+     The time at which we find the  state occupation probabilities.  Default is "last" which is the highest (or "last") event time.
+}
   \item{deci}{
-    Numeric argument specifying number of decimal places for estimates.  Default is 4.
-  }
+     Numeric argument specifying number of decimal places for estimates.  Default is 4.
+}
   \item{covar}{
-    Logical argument to determine if the variance is displayed.  Default is FALSE.  If variance estimates are NULL, an error message will print.
-  }
-  \item{norm}{
-    Logical argument to determine whether normalized or
-  non-normalized (subdistribution) functions are displayed.  Default is
-  normalized distributions.  
-  }
+     Logical argument to determine if variance is reported.  Default is FALSE.
+}
+}
+\details{
+
+Displays the state occupation probabilities and corresponding variance for all states in the multistate model.  
+   
 }
 
-\details{
-   Display of the state entry and exit time distributions and
-   corresponding variance for multistate models at each state in the
-   system where computation makes sense.   
-}
 \value{
-   Returns (invisibly) a list consisting of the state entry / exit
-   distributions (either \code{entry.norm} and \code{exit.norm} or
-   \code{entry.sub} and \code{exit.sub}), and (optionally) the variance
-   estimates (either \code{entry.var.norm} and \code{exit.var.norm} or
-   \code{entry.var.sub} and \code{exit.var.sub}).
+  Returned invisibly:
+  \describe{
+    \item{SOPt}{The state occupation probability at time t.}
+    \item{var.sop}{The variance of the state occupation probabilities at
+      time t (if \code{covar==TRUE}).}
+    }
 }
- 
+
 \references{
   Datta, S. and Satten G.A. (2001). Validity of the Aalen-Johansen
   estimators of stage occupation probabilities and Nelson-Aalen
@@ -56,18 +52,10 @@ EntryExit(object, t="last", deci=4, covar=FALSE, norm=TRUE)
   and Stage Occupation Probabilities for Non-Markov Systems under
   Dependent Censoring. Biometrics, 58(4), 792-802.
 }
-
 \author{
    Nicole Ferguson <nicole.ferguson@kennesaw.edu>,
    Guy Brock <guy.brock@louisville.edu>,
    Somnath Datta <somnath.datta@louisville.edu>
-}
-\note{
-   State entry distributions (and corresponding variance estimates) are
-   displayed for all states where entry into the state occurs. 
-   State exit distributions (and corresponding variance estimates) are
-   displayed for all states where exit from the state occurs. 
-   
 }
 
 \seealso{
@@ -100,10 +88,8 @@ treeobj <- new("graphNEL", nodes=Nodes, edgeL=Edges,
 
 ## Running msSurv
 ans1 <- msSurv(ex1,treeobj)
-EntryExit(ans1,t=0.8)
+SOPt(ans1, t=2.5)
 
 }
-
-
 
 \keyword{survival}

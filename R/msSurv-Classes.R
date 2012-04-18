@@ -1,7 +1,5 @@
 ####################################################################
-####################################################################
 ## Methods/Class Definitions
-####################################################################
 ####################################################################
 
 
@@ -11,20 +9,25 @@ setClass("msSurv",representation(tree="graphNEL",
                                  ns="numeric",
                                  et="numeric",
                                  pos.trans="character",
-                                 nt.states="numeric",
+                                 nt.states="character",
                                  dNs="array",
                                  Ys="array",
-                                 ps="array",
-                                 all.ajs="array",
-                                 Fs="array",
-                                 Gs="array",
-                                 out="array",
-                                 cov.p="array",
                                  sum.dNs="array",
                                  dNs.K="array",
                                  Ys.K="array",
                                  sum.dNs.K="array",
-				 all.I_dA="array",
-				 cov.dA="array",
-				 Fs.var="AorN",
-				 Gs.var="AorN"))
+                                 ps="array",
+                                 AJs="array",
+				 I.dA="array",
+                                 cov.AJs="AorN",
+                                 var.sop="AorN",
+				 cov.dA="AorN",
+                                 Fnorm="array",
+                                 Fsub="array",
+                                 Gnorm="array",
+                                 Gsub="array",
+				 Fnorm.var="AorN",
+				 Fsub.var="AorN",
+				 Gnorm.var="AorN",
+				 Gsub.var="AorN"))
+

@@ -1,0 +1,75 @@
+-------------------
+Version: 1.0-4
+Date: 2012-04-12
+
+	* Changed name of function 'st.t' to 'SOPt'
+	* Changed name of internal function 'stocc' to 'AJ.estimator'
+	* Removed internal function 'Dist.BS.var'
+	* Modified all functions to make more extensive use of vectorized
+	calculations
+	* Output now returned invisibly for functions Pst, SOPt, and
+	EntryExit
+	* Added accessor functions for ALL slots in msSurv objects.
+	* Updated code throughout to use accessor functions rather than
+	make explicit reference to slot names.
+	* Updated functions throughout msSurv package so that the labels
+	accessed the state names instead of column / array index locations.
+	* Changed required names for data columns to 'id', 'start',
+	'stop', 'start.state', and 'end.state' ('start' is optional for
+	right-censored only data)
+	* Removed arguments 'start.states' and 'd.var' from function
+	msSurv.
+	* Added argument 'bs' to determine whether bootstrapping is
+	used to calculate the variance.  Bootstrapping is currently needed
+	for the variance of the A-J estimators when there is dependent
+	censoring, for the variance of the state entry / exit functions,
+	and for the variance of the state occupation probabilities when
+	there is > 1 possible starting state.
+	* Starting proportions in each state (prior to the first observed
+	transition time) are now calculated empirically based on the data
+	* In class msSurv, changed names for the following slots: 'out' to
+	'cov.AJs', 'cov.p' to 'var.sop', 'all.ajs' to 'AJs', and
+	'all.I_dA' to 'I.dA'.
+	* Added the computation and appropriate applications and output
+	for non-normalized state entry and exit distributions (referred to
+	as subdistributions).  These are now calculated and stored in the
+	'Fsub' and 'Gsub' slots, respectively, in msSurv objects.  Options
+	for plotting subdistribution functions, and for calculating them
+	using the EntryExit function, have been added, along with
+	appropriately named accessor functions.
+	* Changed notation for normalized state entry and exit
+	distributions from 'Fs' and 'Gs' to 'Fnorm' and 'Gnorm'.  Added
+	accessor functions Fnorm and Gnorm.
+	* Changed the normalization for the state exit distributions
+	('Gnorm') so that it matches that used for the state entry
+	distributions.  That is, the denominator consists of all
+	individuals who will ever *enter*, not necessarily leave, a state.
+	* Added the 'norm=TRUE' argument to the Dist.CIs function to allow
+	users to specify whether they want normalized entry/exit
+	distributions or if they prefer the non-normalized
+	subdistributions.
+	* Added "->" to output for print and show methods to clearly
+	identify transitions between states.
+	* Added a check and corresponding error message when users request
+	'bs=TRUE' with fewer than 10 subjects
+	* Added a check to ensure that all start times are earlier than
+	the stop times
+	* Now requiring users to insert a " " between transitioning states
+	they want to plot in the 'plot' function to clearly distinguish
+	transitions, e.g. "1 12" instead of "112"
+	* Modified argument "plot.type" in plot method for msSurv objects
+	to include possibilities 'entry.sub', 'entry.norm', 'exit.sub', or
+	'exit.norm' for state entry and exit plots.
+	* Created a "State Entry and Exit Distribution" section of the
+	summary method and removed that information from the "State
+	Occupation Probability" section.
+	* Modified 'print' and 'show' methods to display sparse output
+	concerning the msSurv object, and 'summary' to give more detailed
+	information. Added arguments to the summary method to allow users to
+	customize displayed output, including options for displaying /
+	hiding the transition probabilities, state occupation
+	probabilities, state entry / exit distributions, and Datta-Satten
+	weighted estimates of the counting processes.  Additionally, users
+	can specify at which timepoints they want summary information.
+	* Updated author contact information in the description file.
+
