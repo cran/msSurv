@@ -30,8 +30,15 @@ transitioned to the transient state 2 (ill) or the terminal state 3
 (death).  Individuals in state 2 remained there until they transition to
 the terminal state 3 (death).  All times were rounded to the fourth
 decimal place for clarity of presentation.
-
 }
+
+\references{
+  Nicole Ferguson, Somnath Datta, Guy Brock (2012).
+  msSurv: An R Package for Nonparametric Estimation of Multistate Models.
+  Journal of Statistical Software, 50(14), 1-24.
+  URL http://www.jstatsoft.org/v50/i14/.
+}
+
 
 \examples{
 data(LTRCdata)

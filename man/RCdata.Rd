@@ -27,6 +27,13 @@ until they transitioned to the transient state 2 or the terminal state
 either terminal state 4 or 5.
 }
 
+\references{
+  Nicole Ferguson, Somnath Datta, Guy Brock (2012).
+  msSurv: An R Package for Nonparametric Estimation of Multistate Models.
+  Journal of Statistical Software, 50(14), 1-24.
+  URL http://www.jstatsoft.org/v50/i14/.
+}
+
 \examples{
 data(RCdata)
 

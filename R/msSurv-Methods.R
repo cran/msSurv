@@ -48,9 +48,9 @@ setMethod("Ys",signature(object="msSurv"),
           function(object) return(object@Ys))
 
 ## Counting process for total transitions out of each state, at each time
-setGeneric("sum.dNs",function(object) standardGeneric("sum.dNs"))
-setMethod("sum.dNs",signature(object="msSurv"),
-          function(object) return(object@sum.dNs))
+setGeneric("sum_dNs",function(object) standardGeneric("sum_dNs"))
+setMethod("sum_dNs",signature(object="msSurv"),
+          function(object) return(object@sum_dNs))
 
 ## Datta-Satten counting processes for event times
 setGeneric("dNs.K",function(object) standardGeneric("dNs.K"))
@@ -63,9 +63,9 @@ setMethod("Ys.K",signature(object="msSurv"),
           function(object) return(object@Ys.K))
 
 ## D-S counting process for total transitions out of each state, at each time
-setGeneric("sum.dNs.K",function(object) standardGeneric("sum.dNs.K"))
-setMethod("sum.dNs.K",signature(object="msSurv"),
-          function(object) return(object@sum.dNs.K))
+setGeneric("sum_dNs.K",function(object) standardGeneric("sum_dNs.K"))
+setMethod("sum_dNs.K",signature(object="msSurv"),
+          function(object) return(object@sum_dNs.K))
 
 ####################################################################
 ## State occupation probabilities and A-J estimators
@@ -173,7 +173,7 @@ setMethod("print", signature(x="msSurv"),
               cat(nodes(tree(x)))
               cat("\n\n")
 
-              cat(paste("The specified multistate model has", length(transient),
+              cat(paste("The multistate model has", length(transient),
                         "transient state(s) and", length(absorb), "absorbing state(s).\n\n", sep = " "))
 
               cat("Number of timepoints with transitions: ")
@@ -212,7 +212,7 @@ setMethod("show", signature(object="msSurv"),
               cat(nodes(tree(object)))
               cat("\n\n")
 
-              cat(paste("The specified multistate model has", length(transient),
+              cat(paste("The multistate model has", length(transient),
                         "transient state(s) and", length(absorb), "absorbing state(s).\n\n", sep = " "))
 
               cat("Number of timepoints with transitions: ")
@@ -338,12 +338,12 @@ setMethod("summary", "msSurv",
 
                       ifelse(dns.name %in% colnames(dNs(object)),
                              n.event <- dNs(object)[, dns.name],
-                             n.event <- sum.dNs(object)[, dns.name])
+                             n.event <- sum_dNs(object)[, dns.name])
 
                       if (DS==TRUE) {
                           ifelse(dns.name %in% colnames(dNs.K(object)),
                                  n.event.K <- dNs.K(object)[, dns.name],
-                                 n.event.K <- sum.dNs.K(object)[, dns.name])
+                                 n.event.K <- sum_dNs.K(object)[, dns.name])
                       }
 
                       ys.name <- paste("y", tts[[i]][1], sep=" ")

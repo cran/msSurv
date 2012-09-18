@@ -1,6 +1,25 @@
 -------------------
-Version: 1.0-4
-Date: 2012-04-12
+Version: 1.1-2
+Date: 2012-09-18
+
+	* Now exporting accessor functions for 'msSurv'
+	* Changed license from GPL-3 to GPL-2
+	* Added citation to JSS publication for msSurv (JSS 50:14, 2012)
+	* Included modified JSS paper as package vignette
+	* Changed all occurrences of 'sum.dNs' to 'sum_dNs' to avoid
+	conflict with S3 generic 'sum'
+	* Added package 'KMsurv' to the 'Suggests' field in the
+	DESCRIPTION file
+
+-------------------
+Version: 1.1-1
+Date: 2012-06-25
+
+	* Modified output of 'print', 'show', and 'EntryExit' slightly
+
+-------------------
+Version: 1.1-0
+Date: 2012-04-18
 
 	* Changed name of function 'st.t' to 'SOPt'
 	* Changed name of internal function 'stocc' to 'AJ.estimator'

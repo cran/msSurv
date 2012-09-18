@@ -44,6 +44,11 @@ Pst(object, s=0, t="last", deci=4, covar=FALSE)
     }
 }
 \references{
+  Nicole Ferguson, Somnath Datta, Guy Brock (2012).
+  msSurv: An R Package for Nonparametric Estimation of Multistate Models.
+  Journal of Statistical Software, 50(14), 1-24.
+  URL http://www.jstatsoft.org/v50/i14/.
+  
   Andersen, P.K., Borgan, O., Gill, R.D. and Keiding,
   N. (1993). Statistical models based on counting processes. 
   Springer Series in Statistics. New York, NY: Springer. 

@@ -43,6 +43,11 @@ Displays the state occupation probabilities and corresponding variance for all s
 }
 
 \references{
+  Nicole Ferguson, Somnath Datta, Guy Brock (2012).
+  msSurv: An R Package for Nonparametric Estimation of Multistate Models.
+  Journal of Statistical Software, 50(14), 1-24.
+  URL http://www.jstatsoft.org/v50/i14/.
+
   Datta, S. and Satten G.A. (2001). Validity of the Aalen-Johansen
   estimators of stage occupation probabilities and Nelson-Aalen
   estimators of integrated transition hazards for non-Markov models. 

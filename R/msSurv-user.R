@@ -143,7 +143,7 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
         cat("Normalized state entry distributions for state(s) ",
             initial,
             "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n", "\n")
+	cat("\n")
 
         if (covar==TRUE) {
 
@@ -160,8 +160,7 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
 
         }
 
-
-        cat("\n", "\n")
+        cat("\n")
 
 	cat("The normalized state exit distributions at time ", t, " are:\n")
 	for (state in exit.st) {
@@ -172,7 +171,7 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
 	cat("Normalized state exit distributions for state(s) ",
             terminal,
             "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n", "\n")
+	cat("\n")
 
 
         if (covar==TRUE) {
@@ -213,7 +212,7 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
 	}
         cat("State entry subdistributions for state ", initial,
                   "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n", "\n")
+	cat("\n")
 
         if (covar==TRUE) {
 
@@ -232,7 +231,7 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
         }
 
 
-        cat("\n", "\n")
+        cat("\n")
 
 	cat("The state exit subdistributions at time ", t, " are:\n")
 	for (state in exit.st) {
@@ -242,7 +241,7 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
 	cat("State exit subdistributions for state(s) ",
             terminal,
             "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n", "\n")
+	cat("\n")
 
 
         if (covar==TRUE) {
@@ -324,9 +323,9 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
         cp <- CP(tree, Cens$tree0, Data, Cens$nt.states)
     }
 
-    ds.est <- DS(Cens$nt.states, cp$dNs, cp$sum.dNs, cp$Ys, Cens="0", cens.type)
+    ds.est <- DS(Cens$nt.states, cp$dNs, cp$sum_dNs, cp$Ys, Cens="0", cens.type)
     ## Reduces CP to event times and removes LT and Cens states
-    cp.red <- Red(tree, cp$dNs, cp$Ys, cp$sum.dNs, ds.est$dNs.K, ds.est$Ys.K, ds.est$sum.dNs.K)
+    cp.red <- Red(tree, cp$dNs, cp$Ys, cp$sum_dNs, ds.est$dNs.K, ds.est$Ys.K, ds.est$sum_dNs.K)
     et <- as.numeric(rownames(cp.red$dNs))
 
     ## made a list of all possible transitions
@@ -343,7 +342,7 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
     ## variances of AJs and SOPs when cens.type = "ind"
     ## if cens.type = "dep" then need 'bs=TRUE' to calculate variance
     if (cens.type=="ind") {
-        variances <- var.fn(tree, ns, Cens$nt.states, cp.red$dNs, cp.red$Ys, cp.red$sum.dNs,
+        variances <- var.fn(tree, ns, Cens$nt.states, cp.red$dNs, cp.red$Ys, cp.red$sum_dNs,
                             AJest$AJs, AJest$I.dA, AJest$ps)
     }
     if (bs == TRUE) {
@@ -387,8 +386,8 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
                    ## State information
                    tree=tree, ns=ns, et=et, pos.trans=pos.trans, nt.states=Cens$nt.states,
                    ## Counting process information
-                   dNs=cp.red$dNs, Ys=cp.red$Ys, sum.dNs=cp.red$sum.dNs,
-                   dNs.K=cp.red$dNs.K, Ys.K=cp.red$Ys.K, sum.dNs.K=cp.red$sum.dNs.K,
+                   dNs=cp.red$dNs, Ys=cp.red$Ys, sum_dNs=cp.red$sum_dNs,
+                   dNs.K=cp.red$dNs.K, Ys.K=cp.red$Ys.K, sum_dNs.K=cp.red$sum_dNs.K,
                    ## State occupation probs and A-J estimators
                    ps=AJest$ps, AJs=AJest$AJs, I.dA=AJest$I.dA,
                    cov.AJs=cov.AJs, var.sop=var.sop, cov.dA=cov.dA,

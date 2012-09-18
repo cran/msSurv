@@ -111,16 +111,16 @@ CP <- function(tree, tree0, Data, nt.states) {
     dNs <- matrix(0, nrow=length(times), ncol=length(ds))
 
     ##  matrix of total # of transitions from a state, initialize to zeros
-    sum.dNs <- matrix(0, nrow=length(times), ncol=length(nt.states))
+    sum_dNs <- matrix(0, nrow=length(times), ncol=length(nt.states))
 
     ##  matrix of at-risk sets for each stage at each time
     Ys <- matrix(NA, nrow=length(times), ncol=length(ys))
 
     ## names of rows/columns for vectors/matrices
-    rownames(dNs) <- rownames(sum.dNs) <- rownames(Ys) <- times
+    rownames(dNs) <- rownames(sum_dNs) <- rownames(Ys) <- times
     colnames(dNs) <- ds
     colnames(Ys) <- ys
-    colnames(sum.dNs) <- paste("dN", nt.states, ".")
+    colnames(sum_dNs) <- paste("dN", nt.states, ".")
 
     ## Calculations for transitions 'dNs'
     ## Outer loop = all nodes w/transitions into them
@@ -160,20 +160,20 @@ CP <- function(tree, tree0, Data, nt.states) {
     } ## end of loop for Ys
 
     ## Counting transitions from different states (ie: state sums)
-    sum.dNs <- matrix(nrow=nrow(dNs), ncol=length(nt.states))
-    rownames(sum.dNs) <- rownames(dNs) ##
-    colnames(sum.dNs) <- paste("dN", nt.states, ".")
-    a <- strsplit(colnames(sum.dNs), " ")
+    sum_dNs <- matrix(nrow=nrow(dNs), ncol=length(nt.states))
+    rownames(sum_dNs) <- rownames(dNs) ##
+    colnames(sum_dNs) <- paste("dN", nt.states, ".")
+    a <- strsplit(colnames(sum_dNs), " ")
     a2 <- strsplit(colnames(dNs), " ")
     uni <- unique(sapply(a, function(x) x[2]))##  gives the unique states exiting
 
     for (i in uni) { ## calculating the dNi.s
         b <- which(sapply(a, function(x) x[2]==i))
         b2 <- which(sapply(a2, function(x) x[2]==i))
-        sum.dNs[, b] <- rowSums(dNs[, b2, drop=FALSE])
+        sum_dNs[, b] <- rowSums(dNs[, b2, drop=FALSE])
     } ## end of for loop for calculating dNi.s
 
-    list(dNs=dNs, Ys=Ys, sum.dNs=sum.dNs)
+    list(dNs=dNs, Ys=Ys, sum_dNs=sum_dNs)
 
 } ## end of function
 
@@ -182,14 +182,14 @@ CP <- function(tree, tree0, Data, nt.states) {
 ##            Datta-Satten Estimation                     ##
 ############################################################
 
-DS <- function(nt.states, dNs, sum.dNs, Ys, Cens="0", cens.type) {
-    ## Calculating dNs, sum.dNs, and Y from D-S(2001) paper
-    ## Dividing dNs*, sum.dNs*, & Y* by K to get dNs^, sum.dNs^, & Ys^
+DS <- function(nt.states, dNs, sum_dNs, Ys, Cens="0", cens.type) {
+    ## Calculating dNs, sum_dNs, and Y from D-S(2001) paper
+    ## Dividing dNs*, sum_dNs*, & Y* by K to get dNs^, sum_dNs^, & Ys^
     ## Make sure nt.states is from the non-LT
 
     res <- strsplit(colnames(dNs), " ") ## string splits names
     res2 <- strsplit(colnames(Ys), " ")  ## string split names of Ys
-    res3 <- strsplit(colnames(sum.dNs), " ") ## string splits names of dNs
+    res3 <- strsplit(colnames(sum_dNs), " ") ## string splits names of dNs
 
     ##  looks at censored columns, needed for D-S est
     DS.col.idx <- which(sapply(res, function(x) x[3]==Cens))
@@ -212,7 +212,7 @@ DS <- function(nt.states, dNs, sum.dNs, Ys, Cens="0", cens.type) {
 
 	dNs.K <- dNs/K  ## D-S dNs
 	Ys.K <- Ys/K  ## D-S Ys
-        sum.dNs.K <- sum.dNs/K
+        sum_dNs.K <- sum_dNs/K
     } ## end of independent censoring
 
 
@@ -229,19 +229,19 @@ DS <- function(nt.states, dNs, sum.dNs, Ys, Cens="0", cens.type) {
         K <- exp(-H.t)
         ## K <- apply(k, 2, function(x) c(1, x[-length(x)]))  ## maybe don't need
 
-	dNs.K <- dNs; Ys.K <- Ys; sum.dNs.K <- sum.dNs
+	dNs.K <- dNs; Ys.K <- Ys; sum_dNs.K <- sum_dNs
 	for (i in nt.states) {
             K.idx <- which(sapply(strsplit(colnames(N.Y), " "), function(x) x[2]==i))
             dN.idx <- which(sapply(res, function(x) x[2]==i))
-            sum.dNs.idx <- which(sapply(res3, function(x) x[2]==i))
+            sum_dNs.idx <- which(sapply(res3, function(x) x[2]==i))
             Ys.idx <- which(sapply(res2, function(x) x[2]==i))
             dNs.K[, dN.idx] <- dNs[, dN.idx]/K[, K.idx]
-            sum.dNs.K[, sum.dNs.idx] <- sum.dNs[, sum.dNs.idx]/K[, K.idx]
+            sum_dNs.K[, sum_dNs.idx] <- sum_dNs[, sum_dNs.idx]/K[, K.idx]
             Ys.K[, Ys.idx] <- Ys[, Ys.idx]/K[, K.idx]
 	}
     } ## end of dependent censoring
 
-    res <- list(dNs.K=dNs.K, Ys.K=Ys.K, sum.dNs.K=sum.dNs.K)
+    res <- list(dNs.K=dNs.K, Ys.K=Ys.K, sum_dNs.K=sum_dNs.K)
     return(res)
 
 } ## end of D-S function
@@ -250,7 +250,7 @@ DS <- function(nt.states, dNs, sum.dNs, Ys, Cens="0", cens.type) {
 ##           Reducing dNs & Ys to event times             ##
 ############################################################
 
-Red <- function(tree, dNs, Ys, sum.dNs, dNs.K, Ys.K, sum.dNs.K) {
+Red <- function(tree, dNs, Ys, sum_dNs, dNs.K, Ys.K, sum_dNs.K) {
 
     ## tree is original tree currently inputted by user
     ## dNs, sum.dNS, & Ys come from CP function
@@ -269,14 +269,14 @@ Red <- function(tree, dNs, Ys, sum.dNs, dNs.K, Ys.K, sum.dNs.K) {
     col2.idx <- which(sapply(res2, function(x) x[2]%in%nt.states.f)) ## ids nonterminal columns
     Ys.et <- Ys[row.idx, col2.idx, drop=FALSE] ## reduces Ys
 
-    col3.idx <- which(sapply(strsplit(colnames(sum.dNs), " "), function(x) x[2]%in%nodes(tree)))
-    sum.dNs.et <- sum.dNs[row.idx, col3.idx, drop=FALSE]
+    col3.idx <- which(sapply(strsplit(colnames(sum_dNs), " "), function(x) x[2]%in%nodes(tree)))
+    sum_dNs.et <- sum_dNs[row.idx, col3.idx, drop=FALSE]
 
     dNs.K.et <- dNs.K[row.idx, col.idx, drop=FALSE]
     Ys.K.et <- Ys.K[row.idx, col2.idx, drop=FALSE]
-    sum.dNs.K.et <- sum.dNs.K[row.idx, col3.idx, drop=FALSE]
+    sum_dNs.K.et <- sum_dNs.K[row.idx, col3.idx, drop=FALSE]
 
-    ans <- list(dNs=dNs.et, Ys=Ys.et, sum.dNs=sum.dNs.et, dNs.K=dNs.K.et, Ys.K=Ys.K.et, sum.dNs.K=sum.dNs.K.et)
+    ans <- list(dNs=dNs.et, Ys=Ys.et, sum_dNs=sum_dNs.et, dNs.K=dNs.K.et, Ys.K=Ys.K.et, sum_dNs.K=sum_dNs.K.et)
     return(ans)
 
 }
@@ -388,7 +388,7 @@ Dist <- function(ps, ns, tree) {
 ###         Variance of AJ estimates                    ####
 ############################################################
 
-var.fn <- function(tree, ns, nt.states, dNs.et, Ys.et, sum.dNs, AJs, I.dA, ps) {
+var.fn <- function(tree, ns, nt.states, dNs.et, Ys.et, sum_dNs, AJs, I.dA, ps) {
 
     ## covariance matrices
     state.names <- nodes(tree)
@@ -436,7 +436,7 @@ var.fn <- function(tree, ns, nt.states, dNs.et, Ys.et, sum.dNs, AJs, I.dA, ps) {
                     statej <- state.names[j]
                     statek <- state.names[k]
                     outer.Ys <- paste("y", outer)
-                    outer.sum.dNs <- paste("dN", outer, ".")
+                    outer.sum_dNs <- paste("dN", outer, ".")
 
                     if (Ys.et[i, outer.Ys]==0) {  ## if Y_g = 0 then covariance = 0
         	  	tm[j, k] <- 0
@@ -444,16 +444,16 @@ var.fn <- function(tree, ns, nt.states, dNs.et, Ys.et, sum.dNs, AJs, I.dA, ps) {
                     }
 
                     if (statej == outer & statek == outer) {  ## 3rd formula
-			tm[j, k] <- (Ys.et[i, outer.Ys] - sum.dNs[i, outer.sum.dNs])*sum.dNs[i, outer.sum.dNs] / Ys.et[i, outer.Ys]^3
+			tm[j, k] <- (Ys.et[i, outer.Ys] - sum_dNs[i, outer.sum_dNs])*sum_dNs[i, outer.sum_dNs] / Ys.et[i, outer.Ys]^3
 
                     }  else if (statej == outer & statek != outer) {  ## 2nd formula
                         name <- paste("dN", outer, statek)
 			if (!name%in%colnames(dNs.et)) next
-			tm[j, k] <- -(Ys.et[i, outer.Ys] - sum.dNs[i, outer.sum.dNs])*dNs.et[i, name] / Ys.et[i, outer.Ys]^3
+			tm[j, k] <- -(Ys.et[i, outer.Ys] - sum_dNs[i, outer.sum_dNs])*dNs.et[i, name] / Ys.et[i, outer.Ys]^3
                     } else if (statej != outer & statek == outer) {  ## 2nd formula pt 2, for recurrent
                         name <- paste("dN", outer, statej)
 			if (!name%in%colnames(dNs.et)) next
-			tm[j, k] <- -(Ys.et[i, outer.Ys] - sum.dNs[i, outer.sum.dNs])*dNs.et[i, name]/Ys.et[i, outer.Ys]^3
+			tm[j, k] <- -(Ys.et[i, outer.Ys] - sum_dNs[i, outer.sum_dNs])*dNs.et[i, name]/Ys.et[i, outer.Ys]^3
                     } else { ## 1st formula
 			namek <- paste("dN", outer, statek)
 			namej <- paste("dN", outer, statej)
@@ -584,10 +584,10 @@ BS.var <- function(Data, tree, ns, et, cens.type, B, LT) {
             cp <- CP(tree, Cens$tree0, Data.bs, Cens$nt.states)
         }
 
-        ds.est <- DS(Cens$nt.states, cp$dNs, cp$sum.dNs,
+        ds.est <- DS(Cens$nt.states, cp$dNs, cp$sum_dNs,
                      cp$Ys, Cens="0", cens.type)
-        cp.red <- Red(tree, cp$dNs, cp$Ys, cp$sum.dNs, ds.est$dNs.K,
-                      ds.est$Ys.K, ds.est$sum.dNs.K)
+        cp.red <- Red(tree, cp$dNs, cp$Ys, cp$sum_dNs, ds.est$dNs.K,
+                      ds.est$Ys.K, ds.est$sum_dNs.K)
         AJest <- AJ.estimator(ns, tree, cp.red$dNs.K, cp.red$Ys.K, start.probs)
 
         idx <- which(dimnames(bs.est)[[3]] %in% dimnames(AJest$I.dA)[[3]])

@@ -1,0 +1,1300 @@
+
+% \VignetteIndexEntry{Multistate Survival Models using msSurv}
+% \VignetteDepends{KMsurv}
+% \VignetteKeywords{survival, multistate models, censoring,
+% truncation, nonparametric estimation}
+% \VignettePackage{msSurv}
+
+\SweaveOpts{engine=R, eps=FALSE, echo=TRUE, eval=TRUE, keep.source=TRUE}
+
+\documentclass[nojss, shortnames]{jss}
+
+\usepackage{amsmath,amssymb,amsfonts} % Typical maths resource packages
+\usepackage{graphics}                 % Packages to allow inclusion of graphics
+\usepackage{color}                    % For creating coloured text and background
+\usepackage{hyperref}                 % For creating hyperlinks in cross references
+\usepackage{relsize}
+\usepackage[mathcal]{euscript}
+\usepackage[round]{natbib}
+
+%% need no \usepackage{Sweave.sty}
+
+%% NOTE - Don't need to include Sweave.sty since Schunk, etc.
+%% environment already defined in jss.cls file
+
+\newcommand{\R}[1]{{\textsf{R}}}
+
+%% NOTE - all of below are just more descriptive versions of using \code
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rcode}[1]{{\texttt{#1}}}
+\newcommand{\Rclass}[1]{{\texttt{#1}}}
+\newcommand{\Rmethod}[1]{{\texttt{#1}}}
+\newcommand{\ro}[1]{{\texttt{#1}}}  %% same as \Robject
+\newcommand{\rf}[1]{{\texttt{#1}}}  %% same as \Rfunction
+\newcommand{\rc}[1]{{\texttt{#1}}}  %% same as \Rcode
+\newcommand{\rfarg}[1]{{\texttt{#1}}}
+
+%% modify these as needed
+\author{Nicole Ferguson\\University of Louisville \And Somnath
+  Datta\\University of Louisville \And Guy Brock\\University of
+  Louisville}
+
+\title{\pkg{msSurv}, an \proglang{R} Package for Nonparametric
+  Estimation of Multistate Models}
+
+\Plainauthor{Nicole Ferguson, Guy Brock,  Somnath Datta} %% comma-separated
+\Plaintitle{msSurv, an R Package for Nonparametric
+  Estimation of Multistate Models} %% without formatting
+%%\Shorttitle{A Capitalized Title} %% a short title (if necessary)
+
+\Abstract{We present an \proglang{R} package, \pkg{msSurv}, to
+  calculate the marginal (that is, not conditional on any covariates)
+  state occupation probabilities, the state
+  entry and exit time distributions, and the marginal integrated
+  transition hazard for a general, possibly
+  non-Markov, multistate system under left-truncation and right
+  censoring. For a Markov model, msSurv also calculates and returns
+  the transition probability matrix between any
+  two states. Dependent censoring is handled via modeling the
+  censoring hazard through observable covariates. Pointwise confidence
+  intervals for the above mentioned quantities are obtained and
+  returned for independent censoring from closed-form variance estimators
+  and for dependent censoring using the bootstrap. Note that this
+  vignette is adapted from the publication on \pkg{msSurv} in the
+  \emph{Journal of Statistical Software} \citep{Fer2012}.}
+
+
+\Keywords{survival, \proglang{R} package, nonparametric estimation,
+  multistate models}
+
+\Plainkeywords{survival, R package, nonparametric estimation,
+  multistate models}
+
+%% publication information
+%% NOTE: This needs to filled out ONLY IF THE PAPER WAS ACCEPTED.
+%% If it was not (yet) accepted, leave them commented.
+%% \Volume{13}
+%% \Issue{9}
+%% \Month{September}
+%% \Year{2004}
+%% \Submitdate{2004-09-29}
+%% \Acceptdate{2004-09-29}
+
+\Address{
+Somnath Datta\\
+Department of Bioinformatics and Biostatistics\\
+School of Public Health and Information Sciences\\
+University of Louisville\\
+485 E.~Gray St.\\
+Louisville, KY, USA 40292\\
+E-mail: \email{somnath.datta@louisville.edu}\\
+}
+
+\begin{document}
+
+
+
+
+
+\section{Introduction}
+\label{sec:introduction}
+
+Multistate models are systems of multivariate survival data where individuals
+transition through a series of distinct states following certain paths of
+possible transitions.  These systems are illustrated by a directed graph,
+where distinct states are treated as nodes and possible transitions are
+considered directed edges.  Transitions between states may be reversible or
+irreversible while states can be either absorbing or transient.  Multistate
+models have a wide range of application including epidemiology, dentistry,
+clinical trials, reliability studies in engineering, and medicine where
+individuals progress through the different states of a disease such as cancer
+and AIDS.  Data in these applications are often subject to right censoring
+and possibly left truncation.
+
+\citet[see also \citealp{N72}]{A78} proposed an estimator for the
+integrated hazard under a broad class of counting process models.
+\citet{AJ1978} obtained an estimator for the transition
+probability matrix and subsequently state occupation probabilities
+through product limit integration of the Nelson-Aalen estimator.
+\citet{DS2001} established that the resulting estimators of state
+occupation probabilities remained
+valid even when the process is non-Markovian.  \citet{DS2002} also
+proposed an estimator for state occupation probabilities that can handle
+state dependent censoring and other flexible models through a
+weighting function based on the censoring scheme.  Estimation of state
+entry and exit distribution
+functions are also of interest \citep{Pepe1991,DF11}, and can be
+calculated through
+normalized sums of state occupation probabilities.
+
+
+Several \proglang{R} \citep{R} packages are available on the Comprehensive
+\proglang{R} Archive Network (CRAN, \url{http://www.r-project.org}) for use with
+multistate models. Recently, \emph{The Journal of Statistical
+  Software} published a special volume on
+\emph{Competing Risks and Multi-State Models} featuring papers on the
+\pkg{msm} \citep{Jack07}, \pkg{mstate} \citep{mst10},
+\pkg{etm} \citep{etm11}, and \pkg{p3state.msm} \citep{p3s11} packages.
+Other  packages currently available
+include  \pkg{changeLOS} \citep{LOS06} and \pkg{mvna} \citep{mvna}.  The \pkg{msm} package
+provides functions for fitting
+ multistate Markov models to panel count data and offers extensions to hidden
+ Markov multistate models and possibly inhomogeneous Markov models.
+ The \pkg{mstate} package can be applied to right
+ censored and left truncated data in semiparametric or nonparamertric
+multistate models with or without covariates and it may also be
+applied to competing risk models.  The package offers functions
+ which calculate transition probabilities and standard errors.  It
+ also uses Cox regression models to estimate different types of
+ covariate effects.  The packages \pkg{changeLOS},
+ \pkg{mvna}, and \pkg{etm} all provide
+methods for nonparametric estimation in multistate models.  The most
+specialized package  available is \pkg{changeLOS}, which is
+based on methods described in \citet{SS96} and computes changes in
+length of hospital stay.  It does offer a function to
+compute the Aalen-Johansen estimator, but it does not provide variance
+estimates and cannot be applied to left truncated data.  The
+\pkg{mvna} package computes the Nelson-Aalen estimator of the
+ cumulative transition hazard for any multistate model with right
+censored, left truncated data, but does not compute transition
+probability matrices.  The \pkg{etm}
+package calculates the transition probability matrices and
+corresponding variance estimates for any
+finite-state multistate model with data subject to right
+censoring and left truncation.  State occupation probabilities may be
+indirectly found using  an initial time of zero in the
+\pkg{etm} package.
+
+No packages currently available estimate
+state entry and exit time distributions, nor do they estimate desired
+quantities like transition probabilities for dependent censoring.
+These missing methods are addressed in the \pkg{msSurv} package \citep{Fer2012},
+which we introduce in this paper.  \pkg{msSurv}
+calculates nonparametric estimates of marginal quantities (that is,
+not conditional on any covariates) for time to
+event multistate data subject to right censoring and possibly left
+truncation.
+We assume left truncation occurs with respect to the
+total time of an individual in the multistate system, so that
+individuals are not considered for the estimation of transitions prior
+to their left truncation time.  The main function \rf{msSurv()}
+calculates and returns the marginal state occupation probabilities and
+state entry and exit time distributions for a general, possibly
+non-Markov, multistate system, and provides additional features not
+currently found in  other \proglang{R} packages.  The function also
+calculates and returns the
+marginal integrated transition hazards and the hazard rate functions, and for
+a Markov model, the
+transition probability matrix between any two times.
+Users specify whether the censoring is independent or state dependent and then
+appropriate calculations of variance and confidence intervals are
+performed.  Pointwise confidence intervals for the above mentioned
+quantities are obtained and returned for independent censoring from
+closed-form variance estimators and from bootstrapping for dependent
+censoring.  The function returns an object of \proglang{S4} class \Rclass{msSurv} which
+includes state and transition information, event times, estimates, variance
+estimates, confidence intervals, and counting process information.  The \Rclass{msSurv}
+object can then be summarized or plotted using methods available in the package.
+
+
+The rest of this paper is organized as follows.  Section~\ref{sec:NP methods}
+describes nonparametric estimation methods which
+are used in the \pkg{msSurv} package. Section~\ref{sec:implementation}
+describes the implementation of \pkg{msSurv} and illustrates available
+functions through examples.  Possible future extensions of our
+software package are discussed in Section~\ref{sec:discussion}.
+
+
+\section{The estimators}
+\label{sec:NP methods}
+
+Consider a multistate model with a
+finite state space $\mathcal{S}=\{1,\ldots,M\}$ and set of possible
+transitions between the states in $\mathcal{S}$.  The quantities of
+interest (like state occupation probabilities and state
+entry and exit distributions) can be calculated for complete data, when
+available, and also using estimators obtained from censored data when
+complete data is not known.  It is useful to keep track of all the
+transitions an individual makes before ending in an absorbing state.  Let
+$T_{ik}^\ast$ represent the time of the $k$th transition for
+individual $i = 1, \ldots, n$, where $T_{i0}^\ast=0$ and $T_{ik}^\ast
+= \infty$ if the $i$th individual enters the absorbing state before the
+$k$th transition is made.  Let $C_i$ be the right
+censoring time for the $i$th individual, $L_i$ be the left truncation
+time for the $i$th individual, and $s_{ik}$ be the state occupied by
+the $i$th individual between times $T_{ik-1}^\ast$ and
+$T_{ik}^\ast$.  Let $T_i^\ast = \sup_k \left\{ T_{ik}^\ast:
+  T_{ik}^\ast < \infty \right\}$ be the time for the last transition
+for individual $i$.
+The collection of all transition times and states occupied by
+individual $i$ can be denoted as $\boldsymbol{T}_{i}^\ast = (T_{ik}^\ast: k\geq{1})$
+and $\boldsymbol{s}_{i}^\ast = (s_{ik}: k\geq{1})$, respectively.  Define
+an indicator of whether the $i$th individual was never censored,
+e.g., $\delta_{i}=I(C_{i}>T_{i}^\ast)$, and let $T_{i}=\min(T_{i}^\ast,C_{i})$.
+
+
+The censoring hazard is independent of the multistate system when
+\begin{eqnarray*}
+\lefteqn{\lim_{dt\rightarrow
+    0}\frac{Pr\left(C_i\in[t,t+dt),\delta_i=0|T_i\geq
+      t>L_i,\boldsymbol{T}^{\boldsymbol{\ast}}_{\boldsymbol{i}},
+      \boldsymbol{s}^\ast_{i}\right)}{dt} \;\; = } \hspace{6cm} \\
+& & \lim_{dt \rightarrow
+  0}\frac{Pr\left(C_i\in[t,t+dt),\delta_i=0|T_i\geq t>  L_i\right)}{dt}
+\end{eqnarray*}
+
+\citep{DS2001,DS2002}.  There are times when censoring and  hazards
+of future transitions are affected by time varying covariates
+$Z\,=\,Z\left(t\right)$. In these cases, the
+ covariate variables $Z$ explain the dependence and thus future
+ transitions and censoring events behave conditionally
+ independent given the covariate process $Z$ \citep{DS2002}.
+ Modeling of this censoring hazard using the covariate process is
+ discussed in Section~\ref{subsec:DS}.
+
+
+\subsection{Nelson-Aalen and Aalen-Johansen estimators}
+\label{subsec:Markov}
+
+\citet{And1995} presented formulas for the Nelson-Aalen estimator for
+the integrated hazard matrix $\boldsymbol{A}$ and the Aalen-Johansen
+estimator of the state occupation probability matrix of a Markov
+system.  The counting process and the number at risk for data
+subject to left truncation and right censoring are estimated as
+
+\begin{equation}
+\widehat{N}_{jj'}\left(t\right)=\sum_{i=1}^n\sum_{\,k\geq 1}I\left(T_{ik}^\ast\leq
+t,C_i\geq
+T_{ik}^\ast,L_i<t,s_{ik}=j,s_{ik+1}=j'\right)
+\label{eq:NLT}
+\end{equation}
+and
+\begin{equation}
+\widehat{Y}_j\left(t\right)=\sum_{i=1}^n \sum_{k\geq
+1}I\left(T^\ast_{ik-1}<t\leq T^\ast_{ik},C_i\geq t,L_i<t,s_{ik}=j\right).
+\label{eq:YLT}
+\end{equation}
+
+The Nelson-Aalen estimator of the  cumulative hazard is given by
+%%  \begin{center}
+\begin{equation}
+\widehat{A}_{jj'}\left(t\right)=\left\{
+\begin{matrix}
+\int_0^t{\frac{I\left(\widehat{Y}_j\left(s\right)>0\right)}{\widehat{Y}_j\left(s
+\right)}d\widehat{N}_{jj'}\left(s\right)}&j\neq j'\\
+-\sum_{j\neq j'}\widehat{A}_{jj'}\left(t\right)&j=j',
+\end{matrix}
+\right.
+\label{eq:NA}
+\end{equation}
+% \end{center}
+
+The Aalen-Johansen estimator of the transition probability matrix of a
+Markov multistate system is obtained by product integration of
+$\widehat{A}_{jj'}\left(t\right)$, i.e.,
+\begin{equation}
+\widehat{\boldsymbol{P}}\left(s,t\right)=\prod_{\left(s,t\right]}\left(I+d\widehat{\boldsymbol{A}}\left(u\right)\right),
+\label{eq:AJ}
+\end{equation}
+where
+$\widehat{\boldsymbol{A}}\,=\,\left\{\widehat{A}_{jj'}\right\}$,
+which reduces to simple empirical proportions for the complete data.
+
+A recursive formula for computing the variance of
+transition probability can be found in \citet{And1995}(see formula
+4.4.19 on p.~295 for details).  The resulting estimator is of the
+Greenwood-type.
+
+
+\subsection{State occupation probabilities}
+\label{subsec:ps}
+
+The state occupation probability answers the marginal question: ``What is the
+probability that an individual is in state $j$ at time $t$?''  Let
+$p_j\left(t\right)=Pr\left\{s\left(t\right)=j\right\}$ denote the state
+occupation probabilities where $s\left(t\right)$ is the state occupied by an
+individual at time $t$, $j\in\left\{1,...,M\right\}$.  For incomplete
+data, the state occupation probabilities are estimated as
+
+\begin{equation}
+\widehat{p}_j\left(t\right)=\sum_{k=1}^M\widehat{p}_k\left(0\right)\,
+\widehat{p}_{kj}\left(0,t\right),
+\label{eq:ps}
+\end{equation}
+where $\,\widehat{p}_{kj}\left(0,t\right)$ is the $k,j$th element
+of the matrix
+$\widehat{\boldsymbol{P}}\left(0,t\right)=\prod_{\left(0,t\right)}\left(I+d\widehat{\boldsymbol{A}}\left(u\right)
+\right)$ and $\widehat{p}_k\left(0\right)$ is the initial state occupation
+proportions for state $k$.  This estimator is in fact the Aalen-Johansen estimator of
+state occupation and holds its validity
+regardless of Markovian assumptions \citep{DS2001}.  Estimation of
+state occupation probabilities can be extended to
+dependent censoring and other flexible models by explicitly modeling
+the censoring process \citep*{DS2000,DS2002}.
+
+
+\subsection{Datta-Satten estimators}
+\label{subsec:DS}
+
+\citet{DS2002} use the principle of inverse probability of censoring
+weights  \citep{RR92} to extend the Nelson-Aalen and Aalen-Johansen
+estimators to data subject to dependent censoring.  The resulting Datta-Satten
+estimators use a weighting function, denoted by $K$, which is based on
+a fitted model of the censoring hazards using Aalen's linear hazards
+model with possibly time-dependent covariates $Z$ \citep{Aa1980}.
+
+Reweighted estimators for the counting process and the size of the at risk sets of
+complete data are defined as
+
+\begin{equation}
+\widehat{N}_{jj'}\left(t\right)=\sum_{i=1}^n\sum_{\,k\geq 1}I\left(T_{ik}^\ast\leq
+t,C_i\geq T_{ik}^\ast,L_i<t,s_{ik}=j,s_{ik+1}=j'\right)/K_i\left(T^\ast_{ik}-\right)
+\label{eq:N2}
+\end{equation}
+
+and
+\begin{equation}
+\widehat{Y}_j\left(t\right)=\sum_{i=1}^n\sum_{k\geq
+1}I\left(T^\ast_{ik-1}<t\leq T^\ast_{ik},\,C_i\geq
+t,\,L_i<t,s_{ik}=j\,\right)/K_i\left(t-\right)
+\label{eq:Y2}
+\end{equation}
+
+where $\widehat{K}_i\left(t\right)=\exp\left\{-\widehat{\Lambda}^i_C\left(t|
+\boldsymbol{Z}_i\left(t\right)\right)\right\}$,
+$\boldsymbol{Z}_i\left(t\right)=\left\{Z_i\left(s\right):0\leq
+  s<t\right\}$, and
+$$ \lambda^i_C\left(t|\boldsymbol{Z}_i\left(t\right)\right)=\lim\limits_{dt
+  \to 0}\frac{Pr\left\{C_i\in[t,dt),\delta_i|T_i\geq
+t>L_i,\boldsymbol{Z}_i\left(t\right),\boldsymbol{T}^\ast_i,\boldsymbol{s}^\ast_i
+\right\}}{dt} \, .$$  See \citet{DS2002} for a formal argument.
+
+
+For state dependent right censoring (i.e., when $Z(t) = s(t)$), this
+is equivalent to estimating the censoring hazard by a state specific
+Nelson-Aalen estimator of censoring \citep{DS2002}.
+
+Substituting the formulas for the estimated counting process and the
+number at risk into Equations~\ref{eq:NA}, \ref{eq:AJ}, and \ref{eq:ps} yields the
+Datta-Satten estimators of integrated transition hazards, transition
+probabilities for Markov Systems and state occupation probabilities
+for non-Markov systems under dependent censoring.  Variance estimates for the
+Datta-Satten estimators of transition probabilities are obtained using
+the bootstrap.
+
+%Note when censoring
+%is independent, computation of $\widehat{\boldsymbol{A}}$ does not
+%involve $K$ due to the ratio format of $\widehat{\boldsymbol{A}}$ and
+%the Datta-Satten estimators reduce to the Nelson-Aalen and Aalen-Johansen estimators.
+
+\subsection{State entry and exit distributions}
+\label{subsec:FsGs}
+
+An important application of state occupation probabilities is computing
+the state entry and exit time distribution functions.  We assume an acyclic
+system.  Suppose $X_j$
+denotes the possibly unobserved indicator of an individual ever
+entering state $j$. Suppose $F_j$ and $G_j$ denote the state entry and
+exit time distribution functions, respectively, for the individuals
+who ever enter state $j$ (i.e., $X_j=1$).  Let $\mathcal{S}^j$ denote
+the collection of all states which come after state $j$ in the
+progressive model.  The entry time distribution
+to state $j$ is estimated by taking the normalized sum of the estimated
+state occupation probabilities of state $j$ and all the other states
+that come after $j$ in the system, i.e.,
+
+\begin{equation}
+  \label{eqn:Entry}
+\widehat{F}_j\left(t\right)=\frac{\sum_{k\in \mathcal{S}^j\cup
+    \{j\}}\widehat{p}_k\left(t\right)}{\sum_{k\in \mathcal{S}^j\cup
+    \{j\}}\widehat{p}_k\left(\infty\right)}\text{, }
+\end{equation}
+where
+$\widehat{p}_k\left(\infty\right)=\lim_{t\rightarrow\infty}\widehat{p}_k
+\left(t\right)$.  The denominator in Equation~\ref{eqn:Entry} is the
+probability of an individual ever entering state $j$, while the
+numerator gives the unconditional probability of having entered state
+$j$ by time $t$.  The unconditional probability (e.g., the
+subdistribution function) may be of interest in itself, and the
+\pkg{msSurv} package has the option to return either the normalized or
+unnormalized versions.
+
+The exit time distribution from a transient state $j$ is estimated by
+taking the normalized sum of estimated state occupation probabilities
+of all states that come after state $j$ in the progressive system, i.e.,
+
+\begin{equation}
+  \label{eqn:Exit}
+\widehat{G}_j\left(t\right)=\frac{\sum_{k\in
+    \mathcal{S}^j}\widehat{p}_k\left(t\right)}{\sum_{k\in
+    \mathcal{S}^j\cup \{j\}}\widehat{p}_k\left(\infty\right)}.
+\end{equation}
+The denominator here is the same as in Equation~\ref{eqn:Entry}, and
+\pkg{msSurv} provides the option of returning either the normalized or
+unnormalized version of the function.
+
+The variance for the state entry and exit time distributions are obtained
+using the bootstrap.
+
+\subsection{Confidence intervals}
+\label{subsec:CIs}
+
+Pointwise confidence intervals for estimators of transition probabilities
+and state occupation probabilities follow methods described in
+\citet{And1995}.  Let $\widehat{p}\left(s,t\right)$ be the transition
+probability between two states in the system (the subscripts are
+omitted to simplify the notation) between times $s$ and $t$ and let
+$\widehat{\sigma}\left(s,t\right)$ be the corresponding variance
+estimate.  Then the linear confidence interval for
+$\widehat{p}\left(s,t\right)$ is defined as
+$$
+\widehat{p}\left(s,t\right)\pm
+c_{\alpha/2}\widehat{\sigma}\left(s,t\right),
+$$
+where
+$c_{\left(\alpha/2\right)}$ is the upper $\alpha/2$ percentile of
+the standard normal distribution. It may be beneficial to
+consider transformations to improve estimation especially in the case of small
+sample sizes \citep{BBL87,TG75}.  \citet{BL90} suggested a log
+transformation to improve small sample properties.  The resulting
+formula for the confidence interval is
+$$
+\widehat{p}\left(s,t\right)\exp\left\{\frac{\pm
+c_{\alpha/2}\widehat{\sigma}\left(s,t\right)}{\widehat{p}\left(s,t\right)}
+\right\},
+$$
+
+Other transformations to improve small sample properties include the
+log-log transformation, proposed in the first edition of
+\citet{KP2002} and defined as
+
+$$
+\widehat{p}\left(s,t\right)^{^{\exp\left\{\frac{\pm
+c_{\alpha/2}\widehat{\sigma}\left(s,t\right)}{\widehat{p}\left(s,t\right)\log
+\left(\widehat{p}\left(s,t\right)\right)}\right\}}},
+$$
+
+and the complementary log-log transformation
+
+$$
+1-\left(1-\widehat{p}\left(s,t\right)\right)^{^{\exp\left\{\frac{\pm
+c_{\alpha/2}\widehat{\sigma}\left(s,t\right)}{\left(1-\widehat{p}\left(s,t
+\right)\right)\log\left(1-\widehat{p}\left(s,t\right)\right)}\right\}}}.
+$$
+
+Confidence intervals for state occupation probabilities are calculated
+using $s=0$ in the formulas above.
+
+Confidence intervals for state entry and exit time distributions for
+state $i$ at time $t$ are
+calculated using $\widehat{F}_i(t)$ and $\widehat{G}_i(t)$ instead of
+$\widehat{p}\left(s,t\right)$, with corresponding variance estimate
+$\widehat\sigma(t)$ obtained using the bootstrap.
+
+\section[msSurv package implementation]{\pkg{msSurv} package implementation}
+\label{sec:implementation}
+
+The \pkg{msSurv} package may be applied to any general multistate
+model with data subject to right censoring and possibly left
+truncation. \pkg{msSurv} is written entirely in the \proglang{R}
+programming language using \proglang{S4} classes and methods, and is
+available for download from CRAN. It can be installed
+on all operating systems for which the R software is installed.  Other
+package dependencies include the \pkg{graph} package \citep{graph} and
+the \pkg{lattice} package \citep{Sarkar08}.
+
+The main function of the package, \rf{msSurv}, calculates
+the counting processes and risk sets according to both
+\citet{And1995} and \citet{DS2001}, as well as the state occupation
+probabilities and transition probabilities described in Section~\ref{subsec:CIs}.
+The \pkg{msSurv} package contains a function to calculate the
+transition probabilities between two specific times (\rf{Pst}), a
+function to display the state occupation probabilities at a specific
+time $t$ (\rf{SOPt}), a function to display the state entry and exit
+time distributions at a specific time $t$ (\rf{EntryExit}), as well as
+\Rmethod{print},  \Rmethod{plot},and \Rmethod{summary} methods for
+\Rclass{msSurv} objects.
+
+We will illustrate the application of the \pkg{msSurv} package through
+three examples.  The first example uses simulated data with
+independent right censoring, the second example uses a simulated data
+set with left truncation and independent right censoring,  and the
+third example uses a bone marrow transplant data set from
+\citet{KM2010} with state dependent right censoring.
+
+\subsection{A 5 state example}
+\label{subsec:5stateex}
+
+We consider a five-state progressive model with the tree
+structure illustrated in Figure~\ref{fig:5statetree}.  We simulated a
+data set of 1000 individuals subject to independent right
+censoring with 60\% of individuals starting in state 1 at time 0 and 40\%
+starting in state 2.  Those in state 1 remain there until they
+transition to the transient state 2 or the terminal state 3.
+Individuals in state 2 remain there until they transition to either
+terminal state 4 or 5.
+
+\begin{figure}
+  \begin{center}
+    \includegraphics[height=3in,width=3in]{msSurv-5statetree.pdf}
+    \caption{The five state model for the simulated multistate data
+      discussed in Section~\ref{subsec:5stateex}.}
+    \label{fig:5statetree}
+  \end{center}
+\end{figure}
+
+
+A right censoring time is generated for each of the 1000 individuals
+using the log normal distribution with log mean -0.5 and log standard
+deviation 2.  For individuals starting in state 1, two times are
+generated using the
+Weibull distribution using a sample size of 600 and shape parameter of
+2 to reflect transition times between states 1 and 2 and states 1 and
+3. Times are compared and the minimum time is kept as the event time
+and the corresponding state is recorded.  Then, two additional times
+are generated to reflect
+transitions between states 2 and 4 and states 2 and 5.  These times
+are generated  using the formula
+$T_2=D^{-1}\left(D\left(T_1\right)+R_2\left\{1-D\left(T_1\right)\right\}%
+\right)$ where $T_1$ is the
+first transition time, $R_2$ is a random number generated from
+$U\left(0,1\right)$ independent of $T_1$,  $D\left(\cdot\right)$ denotes
+the distribution function for the Weibull distribution with shape
+parameter 2, $D^{-1}\left(\cdot\right)$ denotes the corresponding
+quantile function.  The minimum of these two times and the censoring
+times are compared and the minimum time is taken as the event time and
+the corresponding state is recorded.  For individuals starting in
+state 2, two times are generated using the Weibull distribution with a
+sample size of 400 and shape parameter of 2 to reflect
+transitions between states 2 and 4 and states 2 and 5.  These times
+are then compared with the corresponding censoring times and the
+minimum time is taken as the event time and the state information is
+recorded.  All times were rounded to the fourth decimal place for
+clarity of presentation.  The simulated data is available as \ro{RCdata} in
+package \pkg{msSurv}.
+
+
+<<prelim, echo=FALSE>>=
+options(prompt="R> ", continue = "+  ", useFancyQuotes = FALSE)
+@
+
+We begin by loading the package.
+
+<<<msSurv>>=
+library("msSurv")
+@
+
+Now we load the data.
+<<RCdata>>=
+data("RCdata")
+@
+
+Data should be in a data frame with
+column names  \Rcode{"id"}, \Rcode{"stop"}, \Rcode{"start.stage"}, and
+\Rcode{"end.stage"}, where \Rcode{"id"} is the individual's identification number,
+\Rcode{"stop"} is the transition time from state $j$ to $j'$,
+\Rcode{"start.stage"} is the state the individual is transitioning from (i.e.,
+$j$), and \Rcode{"end.stage"} is the state the individual is transitioning to
+(i.e., $j'$) and equals 0 if right censored.
+
+<<ex1dat>>=
+RCdata[70:76, ]
+@
+
+Now we specify the tree structure for this multistate system.
+First, input the states in the multistate system as a list or character vector
+of the state names.  Then, store the
+transition information as a list of possible states with allowed transitions
+being lists of edges.  For terminal states, the lists of edges will be
+\rfarg{NULL}.  Nodes correspond to the states in the model and edges
+refer to the allowed transitions.
+
+<<stateinfo, keep.source=TRUE>>=
+Nodes <- c("1", "2", "3", "4", "5")
+Edges <- list("1" = list(edges = c("2", "3")),
+              "2" = list(edges = c("4", "5")),
+              "3" = list(edges = NULL),
+              "4" = list(edges = NULL),
+              "5" = list(edges = NULL))
+@
+
+The tree structure is then specified using the \pkg{graph} package
+\citep{graph} by creating a \Rclass{graphNEL}
+object as below with nodes and edges defined above.
+
+<<tree>>=
+treeobj <- new("graphNEL", nodes = Nodes, edgeL = Edges,
+           edgemode = "directed")
+@
+
+Now we will call the \rf{msSurv} function to perform nonparametric
+estimation for this simulated example.
+
+<<exrtcens>>=
+ex1 <- msSurv(RCdata, treeobj, bs = TRUE)
+@
+
+Results of the analysis can be viewed using the \Rmethod{print}, \Rmethod{plot}, and
+\Rmethod{summary} methods, as well as the \rf{Pst}, \rf{SOPt} and
+\rf{EntryExit} functions,
+available for the \Rclass{msSurv} object \ro{ex1}.  The \rf{print} method
+is discussed in this section while the \Rmethod{summary} and
+\Rmethod{plot} methods are discussed in Sections~\ref{subsec:LTRCex} and
+\ref{subsec:DepEx}, respectively.
+
+The \Rmethod{print} method gives an overview of the model, specifying the
+number of transient and absorbing states and identifying the
+states and possible transitions in the system.
+
+<<printex1>>=
+print(ex1)
+@
+
+The \pkg{msSurv} package contains two functions for the user to easily
+access estimators of transition and state occupation
+probabilities at specific time points.  The package also contains a
+function for the user to access state entry and exit
+time distribution estimators at specific time points.
+
+The transition probabilities between any two times $s$ and $t$ are
+computed using the \rf{Pst} function.  The \rf{Pst}
+function takes an \ro{msSurv} object, a starting time $s$, and an
+ending time $t$ and  prints the transition probability matrix
+$\widehat{\boldsymbol{P}}\left(s,t\right)$.  For example, the
+following code produces the transition probability
+matrix $\widehat{\boldsymbol{P}}(1,3.1)$:
+
+<<eval=TRUE>>=
+Pst(ex1, s = 1, t = 3.1)
+@
+
+The corresponding covariance matrix for this transition probability is
+printed by adding the argument \rfarg{covar = TRUE}.
+<<addvar, eval=FALSE>>=
+Pst(ex1, s = 1, t = 3.1, covar = TRUE)
+@
+
+State occupation probabilities at a specific time $t$ are given using
+the \rf{SOPt} function. This function takes a \ro{msSurv} object as
+well as time $t$ as arguments.  The default time $t$ is the maximum
+event time in the data set.  Individuals may start in any state in the
+system at time 0.  The function prints the state occupation
+probabilities for all states in the system at time t.  For example,
+to find the state occupation probabilities
+at time \rfarg{t = 0.85}.
+
+<<eval=TRUE>>=
+SOPt(ex1, t = 0.85)
+@
+
+The corresponding variance estimates are provided using the argument
+\rfarg{covar = TRUE}.  Variance estimates are found by evaluating the formula in
+\citet{And1995} at $\widehat{\boldsymbol{P}}(0,t)$ for data where all the
+individuals start in a single initial state at time 0.  The bootstrap is
+used to find variance estimates of state occupation for data where
+individuals start in different states of the system.
+
+<<eval=FALSE>>=
+SOPt(ex1, t = 0.85, covar = TRUE)
+@
+
+The \rf{EntryExit} function in \pkg{msSurv} displays the state entry
+and exit time distributions at a specific time $t$.
+This function takes an \ro{msSurv} object and time $t$ as
+arguments and displays the either normalized (if \rfarg{norm = TRUE},
+the default) or non-normalized (subdistribution) state entry and exit
+distributions.  State entry distributions are only displayed for
+non-initial states while state exit distributions are only displayed
+for  non-terminal states.  Estimates are
+rounded to four decimal places by default, but the user may specify a
+different number through the \rfarg{deci} argument.  For example, the
+normalized state entry and exit distributions at time 1 are displayed by
+
+<<EntryExit, eval=TRUE>>=
+EntryExit(ex1, t = 1)
+@
+
+The bootstrap (via the \rfarg{bs = TRUE} argument in the call to \rf{msSurv})
+is needed to obtain variance estimates for the state entry and exit
+time distributions. If this was done, then
+the \rfarg{covar = TRUE} argument in the call to the \rf{EntryExit}
+function can be used to display the variance estimates.
+Note that all of the function \rf{Pst}, \rf{SOPt}, and \rf{EntryExit}
+return their results invisibly, so that users can save and access the
+estimates for later use if desired.  For example, in the following
+code chunk the
+results of the \rf{EntryExit} call are stored in \ro{res}, which
+consists of a list with items \ro{entry.norm}, \ro{entry.var.norm},
+\ro{exit.norm}, and \ro{exit.var.norm}.  If instead subdistributions
+were requested, (through the argument \rfarg{norm = FALSE}), then the
+elements in the list would be the same except with `\ro{sub}' in place
+of `\ro{norm}'.
+
+
+<<EntryExitObjs, eval=TRUE, results=hide>>=
+norm.dist <- EntryExit(ex1, t = 1, covar = TRUE)
+sub.dist  <- EntryExit(ex1, t = 1, norm = FALSE, covar = TRUE)
+@
+<<EntryExitOutput, eval=TRUE>>=
+names(norm.dist)
+names(sub.dist)
+@
+
+
+\subsection{Left truncation and right censoring example}
+\label{subsec:LTRCex}
+
+We consider an irreversible three-state illness-death  model with data
+subject to
+independent right censoring and left truncation \citep{And1995}.  We
+simulated a data set of 1000 individuals starting in state 1 at
+time 0.  Individuals remain in state 1 until they
+transition to the transient state 2 (ill) or the terminal state 3
+(death).  Individuals in state 2 remain there until they transition to
+the terminal state 3 (death).
+
+Two times are generated using the Weibull distribution with a sample
+size of 1000 and shape parameter of 2 to reflect transition times
+for either illness or death.  Right censoring and left truncation
+times are generated using the log normal distribution with mean -0.5 and
+standard deviation 2 on the log scale.  We assume 20\% of individuals
+have a left truncation time of 0.  Only individuals whose
+left truncation times were less than the terminal event times or
+censored event times were kept.  The left truncation time was taken to
+be the time the individual entered the study.  Individuals were not
+included in the at risk set before their left truncation time.  Times
+for these individuals were compared and the minimum time was kept as
+the event time and the corresponding state was recorded.  Then,
+another time was generated reflecting the transition between states 2
+and 3 using the formula
+$T_2=D^{-1}\left(D\left(T_1\right)+R_2\left\{1-D\left(T_1\right)\right\}%
+\right)$ where $T_1$ is the
+first transition time, $R_2$ is a random number generated from
+$U(0,1)$ independent of $T_1$,  $D\left(\cdot\right)$ denotes
+the distribution function for the Weibull distribution with shape
+parameter 2, $D^{-1}\left(\cdot\right)$ denotes the corresponding quantile function.
+These ``death'' times are then compared to the
+censoring times and the minimum time is kept as the event time and the
+corresponding state information is recorded.  All times were rounded
+to the fourth decimal place for clarity of presentation.  The
+simulated data is available as \ro{LTRCdata} in package \pkg{msSurv}.
+
+Begin by loading the data
+<<LTRCata>>=
+data("LTRCdata")
+@
+
+Data should be in a data frame with
+column names  \Rcode{"id"}, \Rcode{"start"}, \Rcode{"stop"}, \Rcode{"start.stage"}, and
+\Rcode{"end.stage"} where \Rcode{"id"} is the individual's identification number,
+\Rcode{"start"} is the start time for the period of observation after the
+individual enters state $j$ (and is the left truncation time for the
+first observed transition),
+\Rcode{"stop"} is the transition time from state $j$ to $j'$,
+\Rcode{"start.stage"} is the state the individual is transitioning from (i.e.,
+$j$), and \Rcode{"end.stage"} is the state the individual is transitioning to
+(and equals 0 if right censored).
+
+<<head>>=
+LTRCdata[489:494, ]
+@
+
+Now we specify the tree structure.
+
+<<LTRCtree, keep.source=TRUE>>=
+Nodes <- c("1", "2", "3")
+Edges <- list("1" = list(edges = c("2", "3")),
+              "2" = list(edges = c("3")),
+              "3" = list(edges = NULL))
+LTRCtree <- new("graphNEL", nodes = Nodes, edgeL = Edges,
+                edgemode = "directed")
+@
+The \rf{msSurv} function is called to perform nonparametric
+estimation for this simulated example.  Since the data is subject to
+left truncation, we must add the argument \rfarg{LT = TRUE} to the call
+of \rf{msSurv}.
+
+<<exrtcenslt>>=
+ex2 <- msSurv(LTRCdata, LTRCtree, LT = TRUE)
+@
+
+When left truncation is present, starting proportions in each state
+are calculated empirically based on the initial states of those
+individuals whose left truncation time is prior to the first observed
+transition time.
+
+Results of the analysis will be illustrated through the
+\Rmethod{summary} method available for the \pkg{msSurv} object
+\ro{ex2}. The \Rmethod{summary} method
+displays information for the state occupation
+probabilities, state entry and exit distributions, and transition
+probabilities.  Estimates of state occupation probability are
+displayed with corresponding variance estimates and cofidence
+intervals (denoted \code{lower.ci} and \code{upper.ci} in the output).  The
+default settings give these estimates to three
+decimal places for key percentile event times (minimum, maximum, 25th
+percentile, median,
+and 75th percentile).  The \Rmethod{summary} method also displays
+estimates of the normalized state entry and exit time distirbutions
+(\code{entry.norm} and \code{exit.norm}, respectively), as well as the
+corresponding subdistributions (\code{entry.sub} and \code{exit.sub}).
+
+
+The \Rmethod{summary} method also provides summary
+information for each allowed transition in the system.  Estimates of
+the transition probabilities are given along with estimates of
+the variance and corresponding confidence intervals (\code{lower.ci} and
+\code{upper.ci}).
+In addition, the risk sets (\code{n.risk}), number of transitions
+(\code{n.event}, for transitions from one state to a different state),
+and number still remaining (\code{n.remain}, for transitions
+into the same state) are all displayed based on the counting process
+calculations in \citet{And1995}.  Additionally (using \rfarg{DS = TRUE}),
+users can display the weighted counting processes based
+on the formulas in \citet{DS2001} (\code{n.risk.K}, \code{n.event.K}, and
+\code{n.remain.K}, respectively).
+
+
+<<eval=TRUE>>=
+summary(ex2, digits = 2)
+@
+
+Confidence intervals provided by default are 95\% linear confidence
+intervals, but the user may change the confidence level to either 90\%
+or 99\% by changing the \rfarg{ci.level} argument or apply a transformation of
+\rfarg{"log"}, \rfarg{"cloglog"} or \rfarg{"log-log"} by changing the
+\rfarg{ci.trans} argument.  The user may change the number of
+significant digits through the \rf{digits} argument.
+
+Summary information for all event times in the data set are displayed
+using the \rfarg{all = TRUE} argument, while summary information at
+specific timepoints can be requested using the \rfarg{times}
+argument.
+
+<<sumAll, eval=FALSE>>=
+summary(ex2, all = TRUE)
+@
+
+Users can customize the display of information by using the logical
+arguments \rfarg{stateocc},
+\rfarg{trans.pr}, and \rfarg{dist} to select whether the state
+occupation probabilities, transition probabilities, and state entry
+and exit time distributions are displayed.  For example, to display
+only the state occupation probabilities use the following code:
+
+<<sumSOP, eval=FALSE>>=
+summary(ex2, trans.pr = FALSE, dist = FALSE)
+@
+
+
+
+\subsection{An example of state dependent censoring}
+\label{subsec:DepEx}
+
+State dependent censoring in \pkg{msSurv} will be illustrated using
+data on 136 cancer patients who received bone marrow transplants found
+in \citet{KM2010}.  Following \citet{DS2002}, we defined five
+states based on platelets returning to a normal level, presence of acute
+graft-versus-host disease (GVHD), and onset of chronic GVHD.
+
+
+\begin{figure}
+  \begin{center}
+    \includegraphics[height=3in,width=3in]{msSurv-depcensimage.pdf}
+    \caption{The five state model for cancer patients who received bone
+      marrow transplants, discussed in Section~\ref{subsec:DepEx}.}
+    \label{fig:depcensimage}
+  \end{center}
+\end{figure}
+
+State 2 is entered when acute GVHD develops before the patients platelet level
+returns to normal.  State 3 is entered if the patient's platelet level
+returns to normal before acute GVHD develops.  State 4 is for patients
+who have both normal platelet levels and acute GVHD while state 5 is
+for those patients who have chronic GVHD.  Patients
+transition to either state 2 or state 3 and then either state 4 or
+state 5, as depicted in Figure~\ref{fig:depcensimage}.
+Patients do not necessarily
+progress to state 5 as they may remain in any state for any amount of
+time.  Those patients who died or experienced relapse were considered
+censored for this example.
+
+Our analysis allows for the censoring hazards to vary by state, since
+relapse or death can be predicted by the
+different (immunologic) states defined in this system.  The cumulative
+censoring hazard for each state is estimated as the Nelson-Aalen
+estimator for censoring at each state and used to weigh the counting
+processes.
+
+We open the data set \proglang{bmt} from the \pkg{KMsurv}
+\citep{KMsurv} package
+and form a data frame with column names \Rcode{"id"},  \Rcode{"stop"},
+\Rcode{"start.stage"}, and \Rcode{"end.stage"}.  (Code is suppressed here but is
+available in the accompanying \proglang{R} file.)
+
+
+<<configdat,echo=FALSE>>=
+if (require("KMsurv")) {
+    data("bmt")
+    attach(bmt)
+
+    ## NOTES
+    ## ta = Time To Acute Graft-Versus-Host Disease
+    ## tp = Time To Platelet Recovery (incorrect in help file for 'bmt')
+    ## tc = Time To Chronic Graft-Versus-Host Disease
+    ## da = Acute GVHD Indicator 1-Developed Acute GVHD 0-Never Developed Acute GVHD)
+    ## dp = Platelet Recovery Indicator 1-Platelets Returned To Normal, 0-Platelets Never Returned to Normal
+    ## dc = Chronic GVHD Indicator 1-Developed Chronic GVHD 0-Never Developed Chronic GVHD
+    ## t2 = Disease Free Survival Time (Time To Relapse, Death Or End Of Study)
+    ## t2 used for CENSORING time here
+
+    ## Determining transitions from STATE 1 ###
+
+    ## 1 -> 2 transition:
+    ## aGVHD BEFORE platelets return to normal
+    s1to2 <- which(ta < tp) #7
+    data12 <- data.frame(id = s1to2, stop = ta[s1to2], start.stage = 1, end.stage = 2)
+
+    ## 1 -> 3 transition:
+    ## platelets return to normal BEFORE aGVHD (and before cGVHD ... )
+    s1to3 <- which(tp < ta & tp < tc) #117
+    data13 <- data.frame(id = s1to3, stop = tp[s1to3], start.stage = 1, end.stage = 3)
+    ## censored individuals = death or relapse, use t2
+    c1 <- which(t2 <= pmin(ta, tp)) ## 13
+    data10 <- data.frame(id = c1, stop = t2[c1], start.stage = 1, end.stage = 0)
+
+
+    ## Determining transitions from STATE 2 ###
+
+    ## 2 -> 4 transition:
+    ## Individuals who developed acute GVHD BEFORE platelets returned to normal AND
+    ## platelets returned to normal BEFORE chronic GVHD AND not censored
+    s2to4 <- which(ta < tp & tp < tc & tp < t2 & dp==1) ## 3 (20, 32, 107) OK
+    data24 <- data.frame(id = s2to4, stop = tp[s2to4], start.stage = 2, end.stage = 4)
+
+    ## 2 -> 5 transition:
+    ## Individuals who developed acute GVHD before platelets return to normal AND
+    ## develop chronic GVHD BEFORE platelets returned to normal AND not censored
+    s2to5 <- which(ta < tp & tc < tp & tc < t2 & dc==1)
+    data25 <- data.frame(id = s2to5, stop = tc[s2to5], start.stage = 2, end.stage = 5)
+
+    ## 2 -> 0 transition (censored):
+    c2 <- which(t2 > ta & t2 <= pmin(tp, tc)) ## 2,  censored in stage 2
+    data20 <- data.frame(id = c2, stop = t2[c2], start.stage = 2, end.stage = 0)
+
+
+    ## Determining transitions from STATE 3 ##
+
+    ## 3 -> 4 transition:
+    ## normal platelets BEFORE aGVHD, then aGVHD BEFORE end of study and cGVHD
+    s3to4 <- which(tp < ta & ta < tc & ta < t2  & da==1 ) ## 19 OK
+    ## 11 of these have dc=1
+    data34 <- data.frame(id = s3to4, stop = ta[s3to4], start.stage = 3, end.stage = 4)
+
+    ## 3 -> 5 transition:
+    ## normal platelets before aGVHD, and cGVHD BEFORE end of study and aGVHD
+    s3to5 <- which(tp < ta & tc < ta & tc < t2 & dc==1) ## 44
+    data35 <- data.frame(id = s3to5, stop = tc[s3to5], start.stage = 3, end.stage = 5)
+
+    ## 3 -> 0 transition (censored):
+    c3 <- which(t2 > tp & t2 <= pmin(ta, tc))
+    data30 <- data.frame(id = c3, stop = t2[c3], start.stage = 3, end.stage = 0)
+
+
+    ## Determining transitions from STATE 4 ##
+
+    ## 4 -> 5 transition:
+    ## TWO ways to reach state 4, via state 2 or state 3
+    ## via state 2 to 4 to 5
+    s4to5a <- which((ta < tp & tp < tc & tp < t2 & dp==1) & tc < t2 & dc==1) ## 1
+    ## via state 3 to 4 to 5
+    s4to5b <- which((tp < ta & ta < tc & ta < t2  & da==1) & tc < t2 & dc==1) ## 11
+    data45a <- data.frame(id = s4to5a, stop = tc[s4to5a], start.stage = 4, end.stage = 5)
+    data45b <- data.frame(id = s4to5b, stop = tc[s4to5b], start.stage = 4, end.stage = 5)
+
+    ## 4 -> 0 transition
+    ## via state 2 to 4 to 5
+    c4a <- which((ta < tp & tp < tc & tp < t2 & dp==1) & t2 <= tc)
+    ## via state 3 to 4 to 5
+    c4b <- which((tp < ta & ta < tc & ta < t2  & da==1) & t2 <= tc)
+    ## identical to below ...
+    ## c4a <-  s2to4[which(!(s2to4%in%s4to5a))] ## 2 (20, 107)
+    ## c4b <-  s3to4[which(!(s3to4%in%s4to5b))]
+    data40a <- data.frame(id = c4a, stop = t2[c4a], start.stage = 4, end.stage = 0)
+    data40b <- data.frame(id = c4b, stop = t2[c4b], start.stage = 4, end.stage = 0)
+
+
+    ## Combining to make a DATASET ready for msSurv ##
+    data.sdc <- rbind(data10, data12, data13, data20, data24, data25,
+                      data30, data34, data35, data40a, data40b, data45a, data45b)
+    data.sdc <- data.sdc[order(data.sdc$id),  ]
+
+    ## Remove row with STOP time of 0
+    ## ID = 124 - basically individual STARTS in stage 3 (platelets normal at t = 0)
+    data.sdc <- data.sdc[-which(data.sdc$stop==0),  ]
+
+    detach(bmt)
+}
+
+@
+
+The first few lines of data are
+<<depdataframe>>=
+if(exists("data.sdc")) head(data.sdc)
+@
+Now we specify the tree structure.
+
+<<deptree, keep.source=TRUE>>=
+Nodes <- c("1", "2", "3", "4", "5")
+Edges <- list("1" = list(edges = c("2", "3")),
+              "2" = list(edges = c("4", "5")),
+              "3" = list(edges = c("4", "5")),
+              "4" = list(edges = c("5")),
+              "5" = list(edges = NULL))
+deptree <- new("graphNEL", nodes = Nodes, edgeL = Edges,
+               edgemode = "directed")
+@
+
+Next we will call the \rf{msSurv} function to perform nonparametric
+estimation on the data.  Since the data is subject to
+state dependent censoring, we must add the argument
+\rfarg{cens.type = "dep"} to the call of \rf{msSurv}.  Bootstrapping is used
+to estimate the variance for transition probabilities for state
+dependent censored data and may be specified using the \rfarg{bs}
+argument.  The default number of
+bootstraps is 200 and that is used for this example.
+
+<<depcall>>=
+if(exists("data.sdc"))
+    DepEx <- msSurv(data.sdc, deptree, cens.type = "dep", bs = TRUE)
+@
+
+The results  are displayed graphically using the \Rmethod{plot}
+method.   The \Rmethod{plot} method takes \ro{msSurv} objects and
+produces plots of estimated quantities using functions available in
+the \pkg{lattice} package \citep{Sarkar08}.  The plots of the state
+occupation probabilities for
+every state in the system are produced by default with their
+corresponding 95\% linear confidence intervals. For state dependent
+censoring, these confidence intervals are based on variances obtained
+through bootstrapping.  Each state is plotted
+separately in a single panel.  The results are given in
+Figure~\ref{fig:ex3plot}.
+<<ex3plot, fig=TRUE, eval=TRUE, include=FALSE>>=
+if(exists("DepEx")) plot(DepEx)
+@
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in,width=5in]{"msSurv-ex3plot"}
+  \caption{Plot of state occupation probability estimates and
+    corresponding confidence intervals for each state in the system
+    illustrated in Figure~\ref{fig:depcensimage}.}
+  \label{fig:ex3plot}
+\end{center}
+\end{figure}
+
+
+Users may also specify specific states to be plotted using the
+\rfarg{states} argument.  For example, to plot the state occupation
+probabilities for state 2, the user would type
+
+<<plotst2, eval=FALSE, include=FALSE>>=
+if(exists("DepEx")) plot(DepEx, state = "2")
+@
+
+To plot the state occupation probabilities for states 2 and 3, use
+
+<<plotst23, fig=TRUE, eval=FALSE,include=FALSE>>=
+if(exists("DepEx")) plot(DepEx, state = c("2","3"))
+@
+
+
+Confidence intervals may be altered using the \rfarg{ci.level} and
+\rfarg{ci.trans} arguments which allow the user to specify a different
+confidence level (\rfarg{0.9} or \rfarg{0.99}) or a different transformation
+(\rfarg{"log"}, \rfarg{"log-log"}, and \rfarg{"cloglog"}, as described in
+Section~\ref{subsec:CIs}).
+Confidence intervals are omitted from the plots using the
+\rfarg{CI = FALSE} argument.
+
+The \rfarg{plot.type} argument is used to change the plotted
+estimators.  As previously mentioned, the default is \rfarg{"stateocc"} for
+the state occupation probabilities, but the user may create plots for the
+transition probabilities (\rfarg{"transprob"}), normalized state entry and
+exit distributions (\rfarg{"entry.norm"} and \rfarg{"exit.norm"}, respectively),
+and state entry and exit subdistribution functions (\rfarg{"entry.sub"} and
+\rfarg{"exit.sub"}, respectively).  The state entry time distributions are
+plotted for all states
+except the initial state by default, but users may specify specific
+states using the \rfarg{"states"} argument.  The state exit
+time distributions are plotted for all non-terminal states by default,
+but specific non-terminal states may be requested by the user.  We
+included the
+argument \rfarg{bs = TRUE} in the call of \rf{msSurv}, so that
+confidence interval estimates of the state entry and exit
+distributions will be plotted.
+
+
+For example, the user may plot the normalized state entry time
+distributions for all the non-initial states in the model
+
+<<entryplot1, fig=TRUE, eval=TRUE, include=FALSE>>=
+if(exists("DepEx"))
+    plot(DepEx, plot.type = "entry.norm", states = "ALL")
+@
+or they may choose to plot specific state entry distributions
+<<entryplot2, fig=TRUE, eval=FALSE, include=FALSE>>=
+if(exists("DepEx"))
+    plot(DepEx, plot.type = "entry.norm", states = c("2","3"))
+@
+
+The resulting plot for all non-initial states is given in
+Figure~\ref{fig:entryplot1}.
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in,width=5in]{"msSurv-entryplot1"}
+  \caption{Plot of normalized state entry time distribution estimates and
+    corresponding confidence intervals for the system
+    illustrated in Figure~\ref{fig:depcensimage}.}
+  \label{fig:entryplot1}
+\end{center}
+\end{figure}
+
+The user may instead plot the normalized state exit time distributions
+for all the non-terminal states in the model
+
+<<exitplot1, fig=TRUE, eval=TRUE, include=FALSE>>=
+if(exists("DepEx"))
+    plot(DepEx, plot.type = "exit.norm")
+@
+or instead plot specific state exit distributions
+
+<<exitplot2, fig=TRUE, eval=FALSE, include=FALSE>>=
+if(exists("DepEx"))
+    plot(DepEx, plot.type = "exit.norm", states = "1")
+@
+The resulting plot for all non-initial states is given in
+Figure~\ref{fig:exitplot1}.
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in, width=5in]{"msSurv-exitplot1"}
+  \caption{Plot of normalized state exit time distribution estimates for all
+    non-terminal states and corresponding confidence intervals for the
+    system illustrated in Figure~\ref{fig:depcensimage}.}
+  \label{fig:exitplot1}
+\end{center}
+\end{figure}
+
+Default plots produced for transition probabilities plots estimates
+and confidence intervals for all possible transitions in the system.
+
+<<ex3transplot, fig=TRUE, eval=TRUE, include=FALSE>>=
+if(exists("DepEx"))
+    plot(DepEx, plot.type = "transprob")
+@
+
+The resulting plot is given in Figure~\ref{fig:ex3transplot}.
+
+Users may specify specific transitions using the \rfarg{trans} argument.  For
+example, if the user wants to plot the transition probabilities for
+the transitions out of state 1, say the \rfarg{"1 2"} and \rfarg{"1 3"} transitions,
+they would type
+
+<<ex3transplot1, fig=TRUE, eval=FALSE, include=FALSE>>=
+if(exists("DepEx"))
+    plot(DepEx, plot.type = "transprob", trans = c("1 2", "1 3"))
+@
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in, width=5in]{"msSurv-ex3transplot"}
+  \caption{Plot of transition probability estimates and their
+    corresponding confidence intervals for the system illustrated in
+    Figure~\ref{fig:depcensimage}.}
+  \label{fig:ex3transplot}
+\end{center}
+\end{figure}
+
+
+To illustrate how to integrate the information in the various
+estimates, we describe a clinical interpretation of the data.
+Starting from state 1, nearly all of the patients transition to either
+state 2 (acute GVHD) or state 3 (normal platelets) by day 100.    By
+70 days post-transplant, roughly 75\% of the patients have had their
+platelet levels return to normal before development of acute GVHD. The
+entry time distribution for state 3 reaches 1.0 by 100 days,
+indicating patients whose platelet levels return to normal prior to
+development of acute GVHD tend to do so within the first 100 days.
+About 40\% of these patients never develop GVHD (remain in state 3),
+with a small percentage subsequently developing acute GHVD and 60\%
+eventually going on to develop chronic GVHD.   A much smaller
+percentage of patients first develop acute GVHD, with about 40\% of
+these eventually having their platelet levels returning to normal.
+All of the patients who develop acute GVHD first eventually go on to
+develop chronic GVHD.
+
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+
+
+We present a comprehensive \proglang{R} package for nonparametric
+estimation of general multistate models subject
+to independent right censoring and possibly left truncation.  This
+package computes the marginal state occupation
+probabilities and state entry and exit time distributions for possibly
+non-Markov models. For a Markov model, the R package, \pkg{msSurv} \citep{Fer2012},
+also calculates and returns the marginal integrated transition hazard
+and the hazard rate functions, as well as the transition probability
+matrix between any two states.  Motivated
+by Datta and Satten (2001), \pkg{msSurv} also
+performs nonparametric estimation for state dependent right
+censored and possibly left truncated data.  Currently no other
+packages available on CRAN calculate the state entry and exit time
+distributions for censored multistate data or calculate nonparametric
+estimates for data subject to state
+dependent censoring.  Pointwise confidence intervals for
+state occupation probability and transition probability matrices are
+obtained and returned for independent censoring from closed-form
+variance estimators and for state dependent censoring using the
+bootstrap.  Pointwise confidence intervals for state entry and exit
+time distributions are obtained using the bootstrap.  The bootstrap is
+also used to find
+variance estimators for state occupation probabilities of data subject
+to state dependent censoring.  The \pkg{msSurv} package provides functions to
+find the state occupation probabilities at a specific time $t$ and to
+find the transition probabilities between any two times $s$ and $t$
+$(s\leq t)$.  Package \pkg{msSurv} is written using \proglang{S4} classes
+and methods.  Methods are available to print, plot, and summarize the
+\ro{msSurv} objects.
+
+The \pkg{msSurv} package has a number of limitations that will be improved
+upon in future releases.  Currently state dependent censoring is the
+only censoring scheme
+incorporated in \pkg{msSurv}, future expansion could include
+incorporating general covariates into the (dependent) censoring
+mechanism.  The package could also be
+extended to include estimation for current status data and eventually
+interval censored data \citep{DS06,LD10}.  Other extensions include
+calculations of the state waiting time distributions \citep{SD02} and
+allowing estimation for recurrent event models.
+
+%% DON'T NEED THIS - predefined by JSS class
+%% \bibliographystyle{jss}
+\bibliography{msSurvRefs}
+
+
+
+
+\end{document}
+
+
+
+
+
