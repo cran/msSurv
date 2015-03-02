@@ -8,65 +8,56 @@
 ## Function for P(s,t)
 ## Takes msSurv object, 1st (s), & last time (t)
 
-Pst <- function(object, s=0, t="last", deci=4, covar=FALSE) {
-
+Pst <- function (object, s = 0, t = "last", deci = 4, covar = FALSE) {
     if (!(0 <= s & s < t))
         stop("'s' and 't' must be positive, and s < t")
-    if (t <= et(object)[1] | s >= et(object)[length(et(object))])
+    if (t < et(object)[1] | s >= et(object)[length(et(object))])
         stop("Either 's' or 't' is an invalid time")
-
-    if (t=="last") t <- et(object)[length(et(object))]
-
-    ## first <- length(et(object)[et(object)<= s]) + 1
-    ## last <- length(et(object)[et(object)<= t])
-
-    idx <- which(s<=et(object) & et(object)<=t) ## location of those [s, t]
+    if (t == "last")
+        t <- et(object)[length(et(object))]
+    ## NOTE - Changed s <= to s <
+    idx <- which(s < et(object) & et(object) <= t)
     l.idx <- length(idx)
-
     cum.prod <- diag(ns(object))
     rownames(cum.prod) <- nodes(tree(object))
-    red.AJs <- array(dim=c(ns(object), ns(object), nrow(dNs(object))),
-                     dimnames=list(rows=nodes(tree(object)), cols=nodes(tree(object)),
-                     dim=rownames(dNs(object))))
-
+    red.AJs <- array(dim = c(ns(object), ns(object), nrow(dNs(object))),
+        dimnames = list(rows = nodes(tree(object)), cols = nodes(tree(object)),
+            dim = rownames(dNs(object))))
     for (i in idx) {
-        cum.prod <- cum.prod %*% I.dA(object)[,,i]
-        red.AJs[,,i] <- cum.prod
+        cum.prod <- cum.prod %*% I.dA(object)[, , i]
+        red.AJs[, , i] <- cum.prod
     }
-
     if (covar == TRUE) {
-
-	bl.Id <- diag(1, (ns(object))^2) ## Ident matrix for Kronecker product
- 	cov.Pst <- array(0, dim=c(dim(I.dA(object)[,,idx])[c(1, 2)]^2, nrow(dNs(object))))
-        colnames(cov.Pst) <- rownames(cov.Pst) <- paste(rep(nodes(tree(object)), ns(object)),
-                                                        sort(rep(nodes(tree(object)), ns(object))))
-
- 	Id <- diag(1, ns(object))
-
-	for (i in idx) {
-            if (i==idx[1]) cov.Pst[,,i] <- bl.Id%*% cov.dA(object)[,,i] %*% bl.Id
-            else cov.Pst[,,i] <- (t(I.dA(object)[,,i]) %x% Id) %*% cov.Pst[,,i-1] %*%((I.dA(object)[,,i]) %x% Id) +
-                (Id %x% red.AJs[,,i-1]) %*% cov.dA(object)[,,i]  %*% (Id%x% t(red.AJs[,,i-1]))
-            ## Note:  red.AJs[,,i-1] = P(s, t-), cov.dA(object)[,,i] = the varcov (cov.dA) for the 1st time
-            ##         (no products), I.dA(object) is I+dA matrix from original program
-	} ## end of for idx
-    } ## end of if var
-
+        bl.Id <- diag(1, (ns(object))^2)
+        cov.Pst <- array(0, dim = c(dim(I.dA(object)[, , idx])[c(1,
+            2)]^2, nrow(dNs(object))))
+        colnames(cov.Pst) <- rownames(cov.Pst) <- paste(rep(nodes(tree(object)),
+            ns(object)), sort(rep(nodes(tree(object)), ns(object))))
+        Id <- diag(1, ns(object))
+        for (i in idx) {
+            if (i == idx[1])
+                cov.Pst[, , i] <- bl.Id %*% cov.dA(object)[,
+                  , i] %*% bl.Id
+            else cov.Pst[, , i] <- (t(I.dA(object)[, , i]) %x%
+                Id) %*% cov.Pst[, , i - 1] %*% ((I.dA(object)[,
+                , i]) %x% Id) + (Id %x% red.AJs[, , i - 1]) %*%
+                cov.dA(object)[, , i] %*% (Id %x% t(red.AJs[,
+                , i - 1]))
+        }
+    }
     cat(paste("Estimate of P(", s, ", ", t, ")\n", sep = ""))
-    print(round(cum.prod, digits=deci))
+    print(round(cum.prod, digits = deci))
     cat("\n")
-
     if (!is.null(cov.AJs(object)) & covar == TRUE) {
         cat(paste("Estimate of cov(P(", s, ", ", t, "))\n", sep = ""))
-        print(round(cov.Pst[, , max(idx)], digits=deci))
+        print(round(cov.Pst[, , max(idx)], digits = deci))
     }
-
     if (!is.null(cov.AJs(object)) & covar == TRUE) {
-        return(invisible(list(Pst=cum.prod, cov.Pst=cov.Pst)))
-    } else {
-        return(invisible(list(Pst=cum.prod)))
+        return(invisible(list(Pst = cum.prod, cov.Pst = cov.Pst[, , max(idx)])))
     }
-
+    else {
+        return(invisible(list(Pst = cum.prod)))
+    }
 }
 
 
@@ -119,17 +110,23 @@ SOPt <- function(object, t="last", deci=4, covar=FALSE) {
 ####################################################################
 
 
-EntryExit <- function(object, t="last", deci=4, covar=FALSE, norm=TRUE) {
+## NOTE - Changed covar argument to var ...
+EntryExit <- function(object, t="last", deci=4, var=FALSE, norm=TRUE) {
 
-    if (covar==TRUE & is.null(Fnorm.var(object))) {
+    if (var==TRUE & is.null(Fnorm.var(object))) {
         stop(paste("msSurv object does not have variance estimates for entry/exit time distributions.\n
 Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
     }
 
-    entry.st <- names(which(!(sapply(inEdges(tree(object)), function(x) length(x) == 0))))
-    initial <- setdiff(nodes(tree(object)), entry.st) ## initial states, no Fs
-    exit.st <- names(which((sapply(edges(tree(object)), function(x) length(x) > 0))))
-    terminal <- setdiff(nodes(tree(object)), exit.st)
+    entry.st <- sapply(strsplit(colnames(Fsub(object)), " "), function(x) x[2])
+    exit.st <- sapply(strsplit(colnames(Gsub(object)), " "), function(x) x[2])
+    no.entry <- nodes(tree(object))[!nodes(tree(object)) %in% entry.st]
+    no.exit <- nodes(tree(object))[!nodes(tree(object)) %in% exit.st]
+
+    ## entry.st <- names(which(!(sapply(inEdges(tree(object)), function(x) length(x) == 0))))
+    ## initial <- setdiff(nodes(tree(object)), entry.st) ## initial states, no Fs
+    ## exit.st <- names(which((sapply(edges(tree(object)), function(x) length(x) > 0))))
+    ## terminal <- setdiff(nodes(tree(object)), exit.st)
 
     if (t=="last") t <- et(object)[length(et(object))]
     t.loc <- length(et(object)[et(object)<= t])
@@ -140,24 +137,15 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
             f.state <- paste("F", state)
             cat("State ", state, ": ", round(Fnorm(object)[t.loc, f.state], deci), "\n")
 	}
-        cat("Normalized state entry distributions for state(s) ",
-            initial,
-            "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n")
+        cat("Normalized state entry distributions not estimated for state(s)", no.entry)
+	cat("\n\n")
 
-        if (covar==TRUE) {
-
+        if (var==TRUE) {
             cat("Variance estimates for normalized state entry distributions: \n")
-
             for (state in entry.st) {
                 f.state <- paste("F", state)
                 cat("State ", state, ": ", round(Fnorm.var(object)[t.loc, f.state], deci), "\n")
             }
-
-            cat("Variance estimates of normalized state entry distributions for state(s) ",
-                initial, "\nis (are) omitted since there are no transitions into that (those) state(s).")
-            cat("\n")
-
         }
 
         cat("\n")
@@ -166,32 +154,21 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
 	for (state in exit.st) {
             g.state <- paste("G", state)
             cat("State ", state, ": ", round(Gnorm(object)[t.loc, g.state], deci), "\n")
-
 	}
-	cat("Normalized state exit distributions for state(s) ",
-            terminal,
-            "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n")
+	cat("Normalized state exit distributions not estimated for state(s)", no.exit)
+	cat("\n\n")
 
 
-        if (covar==TRUE) {
-
+        if (var==TRUE) {
             cat("Variance estimates for normalized state exit distributions: \n")
-
             for (state in exit.st) {
                 g.state <- paste("G", state)
                 cat("State ", state, ": ", round(Gnorm.var(object)[t.loc, g.state], deci), "\n")
             }
-
-            cat("Variance estimates of normalized state exit distributions for state(s) ",
-                terminal,
-                "\nis (are) omitted since there are no transitions into that (those) state(s).")
-
             cat("\n")
-
         }
 
-        if (covar==TRUE) {
+        if (var==TRUE) {
             return(invisible(list(entry.norm = Fnorm(object)[t.loc, ],
                                   exit.norm = Gnorm(object)[t.loc, ],
                                   entry.var.norm = Fnorm.var(object)[t.loc, ],
@@ -210,26 +187,16 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
             f.state <- paste("F", state)
             cat("State ", state, ": ", round(Fsub(object)[t.loc, f.state], deci), "\n")
 	}
-        cat("State entry subdistributions for state ", initial,
-                  "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n")
+        cat("State entry subdistributions not estimated for state(s)", no.entry)
+	cat("\n\n")
 
-        if (covar==TRUE) {
-
+        if (var==TRUE) {
             cat("Variance estimates for normalized state entry distributions: \n")
-
             for (state in entry.st) {
                 f.state <- paste("F", state)
                 cat("State ", state, ": ", round(Fsub.var(object)[t.loc, f.state], deci), "\n")
             }
-
-            cat("Variance estimates of state entry subdistributions for state ",
-                initial,
-                "\nis (are) omitted since there are no transitions into that (those) state(s).")
-            cat("\n")
-
         }
-
 
         cat("\n")
 
@@ -238,30 +205,20 @@ Please re-run the msSurv function with the argument 'bs=TRUE'. \n", sep=""))
             g.state <- paste("G", state)
             cat("State ", state, ": ", round(Gsub(object)[t.loc, g.state], deci), "\n")
 	}
-	cat("State exit subdistributions for state(s) ",
-            terminal,
-            "\nis (are) omitted since there are no transitions into that (those) state(s).")
-	cat("\n")
+	cat("State exit subdistributions not estimated for state(s)", no.exit)
+	cat("\n\n")
 
 
-        if (covar==TRUE) {
-
+        if (var==TRUE) {
             cat("Variance estimates for normalized state exit distributions: \n")
-
             for (state in exit.st) {
                 g.state <- paste("G", state)
                 cat("State ", state, ": ", round(Gsub.var(object)[t.loc, g.state], deci), "\n")
             }
-
-            cat("Variance estimates of state exit subdistributions for state(s) ",
-                terminal,
-                "\nis (are) omitted since there are no transitions into that (those) state(s).")
-
             cat("\n")
-
         }
 
-        if (covar==TRUE) {
+        if (var==TRUE) {
             return(invisible(list(entry.sub = Fsub(object)[t.loc, ],
                                   exit.sub = Gsub(object)[t.loc, ],
                                   entry.var.sub = Fsub.var(object)[t.loc, ],
@@ -297,7 +254,14 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
     if (bs==TRUE & length(unique(Data$id)) < 10)
         stop("At least 10 subjects required for the bootstrap")
 
-
+    ## 02/20/15: Check if LT present and give warning if LT=TRUE is not specified
+    ## browser()
+    if("start" %in% colnames(Data)) {
+        init.start <- with(Data, tapply(start, id, min))
+        if (max(init.start) > 0 & LT == FALSE) {
+            warning("It appears left truncation is present.  If so please specify the 'LT=TRUE'\n  argument to 'msSurv'")
+        }
+    }
 
     if (!("start" %in% colnames(Data)) & LT==FALSE)  Data <- Add.start(Data)
 
@@ -323,7 +287,19 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
         cp <- CP(tree, Cens$tree0, Data, Cens$nt.states)
     }
 
-    ds.est <- DS(Cens$nt.states, cp$dNs, cp$sum_dNs, cp$Ys, Cens="0", cens.type)
+
+    if (cens.type == "ind") {
+        ## NOTE - Need condition for LT as above with CP function call??
+        ds.est <- DS.ind(Cens$nt.states, cp$dNs, cp$sum_dNs, cp$Ys)
+    } else {
+        if (LT) {
+            ds.est <- DS.dep(Data, Cens$treeLT, Cens$nt.states.LT, cp$dNs, cp$sum_dNs, cp$Ys, LT)
+        } else {
+            ds.est <- DS.dep(Data, Cens$tree0, Cens$nt.states, cp$dNs, cp$sum_dNs, cp$Ys, LT)
+        }
+    }
+
+
     ## Reduces CP to event times and removes LT and Cens states
     cp.red <- Red(tree, cp$dNs, cp$Ys, cp$sum_dNs, ds.est$dNs.K, ds.est$Ys.K, ds.est$sum_dNs.K)
     et <- as.numeric(rownames(cp.red$dNs))
@@ -336,8 +312,13 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
     stay <- paste(Cens$nt.states, Cens$nt.states, sep=" ")
     pos.trans <- sort(c(stay, pos.trans)) ## sorting all possible "transitions" from P(s, t)
 
+    ## AJ estimator based on the DS counting process which will automatically handle
+    ##   dependent censoring (see ds.est above)
     AJest <- AJ.estimator(ns, tree, cp.red$dNs.K, cp.red$Ys.K, start.probs)
+
+    ## Entry/Exit Distributions
     entry.exit <- Dist(AJest$ps, ns, tree)
+
 
     ## variances of AJs and SOPs when cens.type = "ind"
     ## if cens.type = "dep" then need 'bs=TRUE' to calculate variance
@@ -346,7 +327,8 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
                             AJest$AJs, AJest$I.dA, AJest$ps)
     }
     if (bs == TRUE) {
-        bs.var <- BS.var(Data, tree, ns, et, cens.type, B, LT)
+        bs.var <- BS.var(Data, tree, ns, et, cens.type, B, LT,
+                         colnames(entry.exit$Fsub), colnames(entry.exit$Gsub))
         cat("\nUsing bootstrap to calculate variances ... \n\n")
     }
 
@@ -392,6 +374,7 @@ msSurv <- function(Data, tree, cens.type="ind", LT=FALSE, bs=FALSE, B=200) {
                    ps=AJest$ps, AJs=AJest$AJs, I.dA=AJest$I.dA,
                    cov.AJs=cov.AJs, var.sop=var.sop, cov.dA=cov.dA,
                    ## State entry and exit distributions
+                   ## NOTE - these might be NULL (eg, if have recursion)
                    Fnorm=entry.exit$Fnorm, Fsub=entry.exit$Fsub,
                    Gnorm=entry.exit$Gnorm, Gsub=entry.exit$Gsub,
                    Fnorm.var=Fnorm.var,  Fsub.var=Fsub.var,

@@ -278,7 +278,7 @@ setMethod("summary", "msSurv",
               if (stateocc){
 
                   cat("State Occupation Information:", "\n", "\n")
-                  for(i in seq(ns(object))){
+                  for(i in seq(ns(object))) {
                       cat(paste("State ", nodes(tree(object))[i], "\n"))
                       if (!is.null(var.sop(object))) {
                           sop.sum <- data.frame(time=etimes[ind],
@@ -302,18 +302,36 @@ setMethod("summary", "msSurv",
 
               if (dist){
 
-                  cat("State Entry and Exit Distribution Information:", "\n", "\n")
-                  for(i in seq(ns(object))){
-                      cat(paste("State ", nodes(tree(object))[i], "\n"))
-                      dist.sum <- data.frame(time=etimes[ind],
-                                             entry.sub=Fsub(object)[ind,i],
-                                             entry.norm=Fnorm(object)[ind,i],
-                                             exit.sub=Gsub(object)[ind,i],
-                                             exit.norm=Gnorm(object)[ind,i])
+                  ## Check whether entry/exit distributions available
+                  if (is.null(Fsub(object))) {
+                      cat("\nEntry distributions not available \n\n")
+                  } else {
+                      cat("State Entry Distribution Information:", "\n", "\n")
+                      F.states <- sapply(strsplit(colnames(Fsub(object)), " "), function(x) x[2])
+                      for(i in seq(ncol(Fsub(object)))) {
+                          cat(paste("State ", F.states[i], "\n"))
+                          dist.sum <- data.frame(time=etimes[ind],
+                                                 entry.sub=Fsub(object)[ind,i],
+                                                 entry.norm=Fnorm(object)[ind,i])
+                          print(dist.sum,row.names=FALSE,digits=digits)
+                          cat("\n")
+                      } ## end of for statement
+                  }
+                  if (is.null(Gsub(object))) {
+                      cat("\nExit distributions not available \n\n")
+                  } else {
+                      cat("State Exit Distribution Information:", "\n", "\n")
+                      G.states <- sapply(strsplit(colnames(Gsub(object)), " "), function(x) x[2])
+                      for(i in seq(ncol(Gsub(object)))) {
+                          cat(paste("State ", G.states[i], "\n"))
+                          dist.sum <- data.frame(time=etimes[ind],
+                                                 exit.sub=Gsub(object)[ind,i],
+                                                 exit.norm=Gnorm(object)[ind,i])
+                          print(dist.sum,row.names=FALSE,digits=digits)
+                          cat("\n")
+                      } ## end of for statement
+                  }
 
-                      print(dist.sum,row.names=FALSE,digits=digits)
-                      cat("\n")
-                  } ## end of for statement
               } ## end of if (dist)
 
               ## ##################################################################
@@ -324,6 +342,7 @@ setMethod("summary", "msSurv",
 
                   cat("Transition Probability Information:", "\n", "\n")
 
+                  ## browser()
                   lt <- length(pos.trans(object))
                   tts <- strsplit(pos.trans(object), split = " ")
                   for (i in seq_along(pos.trans(object))) {
@@ -370,11 +389,13 @@ setMethod("summary", "msSurv",
                               }
                           } else {
                               if (DS==TRUE) {
-                                  tp.sum <- data.frame(time = etimes[ind], estimate = CIs$CI.trans[ind,1,i],
+                                  tp.sum <- data.frame(time = etimes[ind],
+                                                       estimate = AJs(object)[tts[[i]][1], tts[[i]][2], ind],
                                                        n.risk  =  n.risk[ind], n.event = n.event[ind],
                                                        n.risk.K = n.risk.K[ind], n.event.K = n.event.K[ind])
                               } else {
-                                  tp.sum <- data.frame(time = etimes[ind], estimate = CIs$CI.trans[ind,1,i],
+                                  tp.sum <- data.frame(time = etimes[ind],
+                                                       estimate = AJs(object)[tts[[i]][1], tts[[i]][2], ind],
                                                        n.risk  =  n.risk[ind], n.event = n.event[ind])
                               }
                           }
@@ -401,13 +422,15 @@ setMethod("summary", "msSurv",
 
                           }  else {
                               if (DS==TRUE) {
-                                  tp.sum <- data.frame(time = etimes[ind], estimate = CIs$CI.trans[ind,1,i],
+                                  tp.sum <- data.frame(time = etimes[ind],
+                                                       estimate = AJs(object)[tts[[i]][1], tts[[i]][2], ind],
                                                        n.risk = n.risk[ind],
                                                        n.remain = n.risk[ind]-n.event[ind],
                                                        n.risk.K = n.risk.K[ind],
                                                        n.remain.K = n.risk.K[ind]-n.event.K[ind])
                               } else {
-                                  tp.sum <- data.frame(time = etimes[ind], estimate = CIs$CI.trans[ind,1,i],
+                                  tp.sum <- data.frame(time = etimes[ind],
+                                                       estimate = AJs(object)[tts[[i]][1], tts[[i]][2], ind],
                                                        n.risk = n.risk[ind],
                                                        n.remain = n.risk[ind]-n.event[ind])
                               }
@@ -441,14 +464,14 @@ setMethod("plot", signature(x="msSurv", y="missing"),
 
               if (plot.type=="stateocc") {
 
-                  CIs <- MSM.CIs(x, ci.level=0.95) ## Calling CIs
                   if (states[1]=="ALL") states <- nodes(tree(x))
 
-                  f.st <- factor(states)
-                  ls <- length(states)
+                  ## f.st <- factor(states)
+                  ## ls <- length(states)
                   sl <- which(nodes(tree(x))%in%as.numeric(states)) ## location of states in the matrix
 
                   if (CI==TRUE & !is.null(var.sop(x))) {
+                      CIs <- MSM.CIs(x, ci.level=0.95) ## Calling CIs
                       rd <- CIs$CI.p
                       dimnames(rd)$state <- gsub("p", "State", dimnames(rd)$state)
                       y <- as.vector(rd[,1,sl])
@@ -467,11 +490,11 @@ setMethod("plot", signature(x="msSurv", y="missing"),
                   } else {
                       if (CI==TRUE)
                           cat("Warning: 'var.sop'  is NULL and therefore CIs not plotted. \n")
-                      rd <- CIs$CI.p
-                      dimnames(rd)$state <- gsub("p", "State", dimnames(rd)$state)
-                      y <- as.vector(rd[,1,sl])
+                      ## rd <- CIs$CI.p
+                      state.names <- gsub("p", "State", colnames(ps(x)))
+                      y <- as.vector(ps(x)[,sl])
                       xvals <- rep(et(x), length(states))
-                      f.st <- as.factor(rep(dimnames(rd)$state[sl], each=dim(rd)[1]))
+                      f.st <- as.factor(rep(state.names[sl], each=length(et(x))))
                       st.plot <- xyplot(y ~ xvals | f.st, type="s",col=1, ...)
                       st.plot <- update(st.plot, main="Plot of State Occupation Probabilites",
                                         xlab="Event Times", ylab="State Occupation Probabilities",
@@ -487,16 +510,15 @@ setMethod("plot", signature(x="msSurv", y="missing"),
 
               if (plot.type=="transprob") {
 
-                  CIs <- MSM.CIs(x, ci.level, ci.trans, sop=FALSE) ## Calling CIs
                   all.trans <- pos.trans(x)
                   if (trans[1] =="ALL") trans <- all.trans
-
-                  rd <- CIs$CI.trans
-                  dimnames(rd)$trans <- gsub(" ", " -> ", dimnames(rd)$trans)
                   tr <- which(all.trans%in%trans) ## location of states in the matrix
 
                   if (CI==TRUE & !is.null(cov.AJs(x))) {
 
+                      CIs <- MSM.CIs(x, ci.level, ci.trans, sop=FALSE) ## Calling CIs
+                      rd <- CIs$CI.trans
+                      dimnames(rd)$trans <- gsub(" ", " -> ", dimnames(rd)$trans)
                       y <- as.vector(rd[,1,tr])
                       y2 <- as.vector(rd[,2,tr]) ## lower limit
                       y3 <- as.vector(rd[,3,tr]) ## upper limit
@@ -514,9 +536,18 @@ setMethod("plot", signature(x="msSurv", y="missing"),
                   } else {
                       if (CI==TRUE)
                           cat("Warning: 'cov.AJs'  is NULL and therefore CIs not plotted. \n")
-                      y <- as.vector(rd[,1,tr])
-                      xvals <- rep(et(x), length(tr))
-                      f.tp <- as.factor(rep(dimnames(rd)$trans[tr], each=dim(rd)[1]))
+                      ## NOTE - copied from CIs function and modified accordingly
+                      rd <- array(dim=c(length(et(x)), 1, length(trans)),
+                                        dimnames = list(rows=et(x), cols=c("est"),
+                                        trans=trans))
+                      for (j in 1:length(trans)) { ## loop through possible transitions
+                          idx <- unlist(strsplit(trans[j], " "))
+                          rd[ , 1, j] <- AJs(x)[idx[1], idx[2] , ]
+                      }
+                      dimnames(rd)$trans <- gsub(" ", " -> ", dimnames(rd)$trans)
+                      y <- as.vector(rd[,1,])
+                      xvals <- rep(et(x), length(trans))
+                      f.tp <- as.factor(rep(dimnames(rd)$trans, each=length(et(x))))
                       tr.plot <- xyplot(y ~ xvals | f.tp, type="s", lty=1, col=1, ...)
                       tr.plot <- update(tr.plot, main="Plot of Transition Probabilites",
                                         xlab="Event Times", ylab="Transition Probabilities",
@@ -528,53 +559,62 @@ setMethod("plot", signature(x="msSurv", y="missing"),
               } ## end of 'transprob' plot
 
 
-              ####################################################################
+              ## ##################################################################
               ## Entry subdistribution function
-              ####################################################################
+              ## ##################################################################
 
               if (plot.type=="entry.sub") {
 
-                  enter <- names(which(!(sapply(inEdges(tree(x)), function(x) length(x) == 0))))
-                  if (states[1]=="ALL") states <- enter
+                  ## Check whether entry/exit distributions available at all
+                  if (is.null(Fsub(x))) {
+                      stop("\nEntry distributions not available \n\n")
+                  }
 
-                  f.st <- factor(states)
-                  ls <- length(states)
-                  sl <- which(nodes(tree(x))%in%states) ## location of states in the matrix
+                  ## Check whether entry/exit distributions available for requested state(s)
+                  ## states for which entry dist is available
+                  F.states <- sapply(strsplit(colnames(Fsub(x)), " "), function(x) x[2])
+                  if (states[1]=="ALL") states <- F.states
+                  if (any(!(states %in% F.states))) {
+                      not.avail <- states[!(states %in% F.states)]
+                      stop("\nState(s) ", not.avail, " do not have entry distributions available \n\n")
+                  }
 
 
                   if (CI==TRUE & !is.null(Fsub.var(x))) {
 
-                      CIs <- Dist.CIs(x, ci.level, ci.trans, norm=FALSE) ## Calling CIs for subdistribution
-                      rd <- CIs$CI.Fs
-                      dimnames(rd)$state=gsub("F", "State", dimnames(rd)$state)
-                      y <- as.vector(rd[,1,sl])
-                      y2 <- as.vector(rd[,2,sl]) ## lower limit
-                      y3 <- as.vector(rd[,3,sl]) ## upper limit
+                      ## Calling CIs for subdistribution
+                      CIs <- Dist.CIs(x, ci.level, ci.trans, type = plot.type, states)
+                      dimnames(CIs)$states <- paste("State", states)
+                      y <- as.vector(CIs[,1,])
+                      y2 <- as.vector(CIs[,2,]) ## lower limit
+                      y3 <- as.vector(CIs[,3,]) ## upper limit
                       xvals <- rep(et(x), length(states))
-                      f.st <- as.factor(rep(dimnames(rd)$state[sl], each=dim(rd)[1]))
+                      f.st <- as.factor(rep(dimnames(CIs)$states, each=length(et(x))))
                       ent.plot <- xyplot(y + y2 + y3 ~ xvals | f.st, allow.multiple=TRUE,
                                          type="s", lty=c(1,2,2), col=c(1,2,2), ...)
                       ent.plot <- update(ent.plot, main="Plot of State Entry Time Subdistributions",
                                          xlab="Event Times", ylab="State Entry Time Subdistributions",
                                          key = list(lines=list(col=c(1, 2, 2), lty=c(1, 2, 2)),
-                                         text=list(c("Est", "Lower CI", "Upper CI")),
-                                         columns=3))
+                                             text=list(c("Est", "Lower CI", "Upper CI")),
+                                             columns=3))
                       print(ent.plot)
                   }  else {
-                          if (CI==TRUE)
-                              cat("Warning: 'Fsub.var'  is NULL and therefore CIs not plotted. \n")
-                          rd <- Fsub(x)
-                          dimnames(rd)[[2]]=gsub("F", "State", dimnames(rd)[[2]])
-                          y <- as.vector(rd[,sl])
-                          xvals <- rep(et(x), length(states))
-                          f.st <- as.factor(rep(dimnames(rd)[[2]][sl], each=dim(rd)[1]))
-                          ent.plot <- xyplot(y ~ xvals | f.st, type="s", col=1, ...)
-                          ent.plot <- update(ent.plot, main="Plot of State Entry Time Subdistributions",
-                                             xlab="Event Times", ylab="State Entry Time Subdistributions",
-                                             key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
-                          print(ent.plot)
-                      }
+                      if (CI==TRUE)
+                          cat("Warning: 'Fsub.var'  is NULL and therefore CIs not plotted. \n")
+                      ## Here select appropriate columns ...
+                      Dist <- Fsub(x)[,paste("F", states),drop = FALSE]
+                      dimnames(Dist)[[2]]=gsub("F", "State", dimnames(Dist)[[2]])
+                      y <- as.vector(Dist)
+                      xvals <- rep(et(x), length(states))
+                      f.st <- as.factor(rep(dimnames(Dist)[[2]], each=length(et(x))))
+                      ent.plot <- xyplot(y ~ xvals | f.st, type="s", col=1, ...)
+                      ent.plot <- update(ent.plot, main="Plot of State Entry Time Subdistributions",
+                                         xlab="Event Times", ylab="State Entry Time Subdistributions",
+                                         key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
+                      print(ent.plot)
+                  }
               } ## end of entry subdistribution plot
+
 
 
               ####################################################################
@@ -583,48 +623,57 @@ setMethod("plot", signature(x="msSurv", y="missing"),
 
               if (plot.type=="entry.norm") {
 
-                  enter <- names(which(!(sapply(inEdges(tree(x)), function(x) length(x) == 0))))
-                  if (states[1]=="ALL") states <- enter
 
-                  f.st <- factor(states)
-                  ls <- length(states)
-                  sl <- which(nodes(tree(x))%in%states) ## location of states in the matrix
+                  ## Check whether entry/exit distributions available at all
+                  if (is.null(Fnorm(x))) {
+                      stop("\nNormalized entry distributions not available \n\n")
+                  }
+
+                  ## Check whether entry/exit distributions available for requested state(s)
+                  ## states for which entry dist is available
+                  F.states <- sapply(strsplit(colnames(Fnorm(x)), " "), function(x) x[2])
+                  if (states[1]=="ALL") states <- F.states
+                  if (any(!(states %in% F.states))) {
+                      not.avail <- states[!(states %in% F.states)]
+                      stop("\nState(s) ", not.avail, " do not have normalized entry distributions available \n\n")
+                  }
 
 
                   if (CI==TRUE & !is.null(Fnorm.var(x))) {
 
-                      CIs <- Dist.CIs(x,ci.level,ci.trans,norm=TRUE) ## Calling CIs for normalized distribution
-                      rd <- CIs$CI.Fs
-                      dimnames(rd)$state=gsub("F", "State", dimnames(rd)$state)
-                      y <- as.vector(rd[,1,sl])
-                      y2 <- as.vector(rd[,2,sl]) ## lower limit
-                      y3 <- as.vector(rd[,3,sl]) ## upper limit
+                      ## Calling CIs for subdistribution
+                      CIs <- Dist.CIs(x, ci.level, ci.trans, type = plot.type, states)
+                      dimnames(CIs)$states <- paste("State", states)
+                      y <- as.vector(CIs[,1,])
+                      y2 <- as.vector(CIs[,2,]) ## lower limit
+                      y3 <- as.vector(CIs[,3,]) ## upper limit
                       xvals <- rep(et(x), length(states))
-                      f.st <- as.factor(rep(dimnames(rd)$state[sl], each=dim(rd)[1]))
+                      f.st <- as.factor(rep(dimnames(CIs)$states, each=length(et(x))))
                       ent.plot <- xyplot(y + y2 + y3 ~ xvals | f.st, allow.multiple=TRUE,
-                                         type="s",lty=c(1,2,2),col=c(1,2,2), ...)
+                                         type="s", lty=c(1,2,2), col=c(1,2,2), ...)
                       ent.plot <- update(ent.plot, main="Plot of Normalized State Entry Time Distributions",
                                          xlab="Event Times", ylab="Normalized State Entry Time Distributions",
                                          key = list(lines=list(col=c(1, 2, 2), lty=c(1, 2, 2)),
-                                         text=list(c("Est", "Lower CI", "Upper CI")),
-                                         columns=3))
+                                             text=list(c("Est", "Lower CI", "Upper CI")),
+                                             columns=3))
                       print(ent.plot)
-                      } else {
-                          if (CI==TRUE)
-                              cat("Warning: 'Fnorm.var' is NULL and therefore CIs not plotted. \n")
-                          rd <- Fnorm(x)
-                          dimnames(rd)[[2]]=gsub("F", "State", dimnames(rd)[[2]])
-                          y <- as.vector(rd[,sl])
-                          xvals <- rep(et(x), length(states))
-                          f.st <- as.factor(rep(dimnames(rd)[[2]][sl], each=dim(rd)[1]))
-                          ent.plot <- xyplot(y ~ xvals | f.st, type="s", col=1, ...)
-                          ent.plot <- update(ent.plot, main="Plot of Normalized State Entry Time Distributions",
-                                             xlab="Event Times", ylab="Normalized State Entry Time Distributions",
-                                             key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
-                          print(ent.plot)
-                      }
+                  }  else {
+                      if (CI==TRUE)
+                          cat("Warning: 'Fnorm.var'  is NULL and therefore CIs not plotted. \n")
+                      ## Here select appropriate columns ...
+                      Dist <- Fnorm(x)[,paste("F", states),drop = FALSE]
+                      dimnames(Dist)[[2]]=gsub("F", "State", dimnames(Dist)[[2]])
+                      y <- as.vector(Dist)
+                      xvals <- rep(et(x), length(states))
+                      f.st <- as.factor(rep(dimnames(Dist)[[2]], each=length(et(x))))
+                      ent.plot <- xyplot(y ~ xvals | f.st, type="s", col=1, ...)
+                      ent.plot <- update(ent.plot, main="Plot of Normalized State Entry Time Distributions",
+                                         xlab="Event Times", ylab="Normalized State Entry Time Distributions",
+                                         key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
+                      print(ent.plot)
+                  }
+              } ## end of normalized entry subdistribution plot
 
-              } ## end of normalized entry distribution plot
 
               ####################################################################
               ## State exit subdistribution
@@ -632,47 +681,55 @@ setMethod("plot", signature(x="msSurv", y="missing"),
 
               if (plot.type=="exit.sub") {
 
-                  transient <- names(which(sapply(edges(tree(x)), function(x) length(x) > 0)))
-                  if (states[1]=="ALL") states <- transient
+                  ## Check whether entry/exit distributions available at all
+                  if (is.null(Gsub(x))) {
+                      stop("\nExit distributions not available \n\n")
+                  }
 
-                  f.st <- factor(states)
-                  ls <- length(states)
-                  sl <- which(nodes(tree(x))%in%as.numeric(states)) ## location of states in the matrix
+                  ## Check whether entry/exit distributions available for requested state(s)
+                  ## states for which exit dist is available
+                  G.states <- sapply(strsplit(colnames(Gsub(x)), " "), function(x) x[2])
+                  if (states[1]=="ALL") states <- G.states
+                  if (any(!(states %in% G.states))) {
+                      not.avail <- states[!(states %in% G.states)]
+                      stop("\nState(s) ", not.avail, " do not have exit distributions available \n\n")
+                  }
 
 
                   if (CI==TRUE & !is.null(Gsub.var(x))) {
 
-                      CIs <- Dist.CIs(x,ci.level,ci.trans,norm=FALSE)
-                      ## Calling CIs, adding norm arg for subdistribution CIs
-                      rd <- CIs$CI.Gs
-                      dimnames(rd)$state=gsub("G", "State", dimnames(rd)$state)
-                      y <- as.vector(rd[,1,sl])
-                      y2 <- as.vector(rd[,2,sl]) ## lower limit
-                      y3 <- as.vector(rd[,3,sl]) ## upper limit
+                      ## Calling CIs for subdistribution
+                      CIs <- Dist.CIs(x, ci.level, ci.trans, type = plot.type, states)
+                      dimnames(CIs)$states <- paste("State", states)
+                      y <- as.vector(CIs[,1,])
+                      y2 <- as.vector(CIs[,2,]) ## lower limit
+                      y3 <- as.vector(CIs[,3,]) ## upper limit
                       xvals <- rep(et(x), length(states))
-                      f.st <- as.factor(rep(dimnames(rd)$state[sl], each=dim(rd)[1]))
-                      exit.plot <- xyplot(y + y2 + y3 ~ xvals | f.st, allow.multiple=TRUE,
-                                          type="s", lty=c(1,2,2), col=c(1,2,2),...)
-                      exit.plot <- update(exit.plot, main="Plot of State Exit Time Distributions",
-                                          xlab="Event Times", ylab="State Exit Time Distributions",
-                                          key = list(lines=list(col=c(1, 2, 2), lty=c(1, 2, 2)),
-                                          text=list(c("Est", "Lower CI", "Upper CI")),
-                                          columns=3))
-                      print(exit.plot)
-                      }  else {
-                          if (CI==TRUE)
-                              cat("Warning: 'Gsub.var' is NULL and therefore CIs not plotted. \n")
-                          rd <- Gsub(x)
-                          dimnames(rd)[[2]]=gsub("G", "State", dimnames(rd)[[2]])
-                          y <- as.vector(rd[,sl])
-                          xvals <- rep(et(x), length(states))
-                          f.st <- as.factor(rep(dimnames(rd)[[2]][sl], each=dim(rd)[1]))
-                          exit.plot <- xyplot(y ~ xvals | f.st, type="s", col=1)
-                          exit.plot <- update(exit.plot, main="Plot of State Exit Time Distributions",
-                                              xlab="Event Times",ylab="State Exit Time Distributions",
-                                              key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
-                          print(exit.plot)
-                      }
+                      f.st <- as.factor(rep(dimnames(CIs)$states, each=length(et(x))))
+                      ent.plot <- xyplot(y + y2 + y3 ~ xvals | f.st, allow.multiple=TRUE,
+                                         type="s", lty=c(1,2,2), col=c(1,2,2), ...)
+                      ent.plot <- update(ent.plot, main="Plot of State Exit Time Subdistributions",
+                                         xlab="Event Times", ylab="State Exit Time Subdistributions",
+                                         key = list(lines=list(col=c(1, 2, 2), lty=c(1, 2, 2)),
+                                             text=list(c("Est", "Lower CI", "Upper CI")),
+                                             columns=3))
+                      print(ent.plot)
+                  }  else {
+                      if (CI==TRUE)
+                          cat("Warning: 'Gsub.var'  is NULL and therefore CIs not plotted. \n")
+                      ## Here select appropriate columns ...
+                      Dist <- Gsub(x)[,paste("G", states),drop = FALSE]
+                      dimnames(Dist)[[2]]=gsub("G", "State", dimnames(Dist)[[2]])
+                      y <- as.vector(Dist)
+                      xvals <- rep(et(x), length(states))
+                      f.st <- as.factor(rep(dimnames(Dist)[[2]], each=length(et(x))))
+                      ent.plot <- xyplot(y ~ xvals | f.st, type="s", col=1, ...)
+                      ent.plot <- update(ent.plot, main="Plot of State Exit Time Subdistributions",
+                                         xlab="Event Times", ylab="State Exit Time Subdistributions",
+                                         key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
+                      print(ent.plot)
+                  }
+
               } ## end of exit.sub
 
 
@@ -682,46 +739,55 @@ setMethod("plot", signature(x="msSurv", y="missing"),
 
               if (plot.type=="exit.norm") {
 
-                  transient <- names(which(sapply(edges(tree(x)), function(x) length(x) > 0)))
-                  if (states[1]=="ALL") states<-transient
+                  ## Check whether entry/exit distributions available at all
+                  if (is.null(Gnorm(x))) {
+                      stop("\nNormalized exit distributions not available \n\n")
+                  }
 
-                  f.st <- factor(states)
-                  ls <- length(states)
-                  sl <- which(nodes(tree(x))%in%as.numeric(states)) ## location of states in the matrix
+                  ## Check whether entry/exit distributions available for requested state(s)
+                  ## states for which exit dist is available
+                  G.states <- sapply(strsplit(colnames(Gnorm(x)), " "), function(x) x[2])
+                  if (states[1]=="ALL") states <- G.states
+                  if (any(!(states %in% G.states))) {
+                      not.avail <- states[!(states %in% G.states)]
+                      stop("\nState(s) ", not.avail, " do not have normalized exit distributions available \n\n")
+                  }
 
 
                   if (CI==TRUE & !is.null(Gnorm.var(x))) {
 
-                      CIs <- Dist.CIs(x,ci.level,ci.trans,norm=TRUE) ## Calling CIs
-                      rd <- CIs$CI.Gs
-                      dimnames(rd)$state=gsub("G", "State", dimnames(rd)$state)
-                      y <- as.vector(rd[,1,sl])
-                      y2 <- as.vector(rd[,2,sl]) ## lower limit
-                      y3 <- as.vector(rd[,3,sl]) ## upper limit
+                      ## Calling CIs for subdistribution
+                      CIs <- Dist.CIs(x, ci.level, ci.trans, type = plot.type, states)
+                      dimnames(CIs)$states <- paste("State", states)
+                      y <- as.vector(CIs[,1,])
+                      y2 <- as.vector(CIs[,2,]) ## lower limit
+                      y3 <- as.vector(CIs[,3,]) ## upper limit
                       xvals <- rep(et(x), length(states))
-                      f.st <- as.factor(rep(dimnames(rd)$state[sl], each=dim(rd)[1]))
-                      exit.plot <- xyplot(y + y2 + y3 ~ xvals | f.st, allow.multiple=TRUE,
-                                          type="s",lty=c(1,2,2), col=c(1,2,2), ...)
-                      exit.plot <- update(exit.plot, main="Plot of State Exit Time Distributions",
-                                          xlab="Event Times", ylab="State Exit Time Distributions",
-                                          key = list(lines=list(col=c(1, 2, 2), lty=c(1, 2, 2)),
-                                          text=list(c("Est", "Lower CI", "Upper CI")),
-                                          columns=3))
-                      print(exit.plot)
-                      } else {
-                          if (CI==TRUE)
-                              cat("Warning: 'Gnorm.var'  is NULL and therefore CIs not plotted. \n")
-                          rd <- Gnorm(x)
-                          dimnames(rd)[[2]]=gsub("G", "State", dimnames(rd)[[2]])
-                          y <- as.vector(rd[,sl])
-                          xvals <- rep(et(x), length(states))
-                          f.st <- as.factor(rep(dimnames(rd)[[2]][sl], each=dim(rd)[1]))
-                          exit.plot <- xyplot(y ~ xvals | f.st, type="s",col=1, ...)
-                          exit.plot <- update(exit.plot, main="Plot of State Exit Time Distributions",
-                                              xlab="Event Times", ylab="State Exit Time Distributions",
-                                              key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
-                          print(exit.plot)
-                      }
+                      f.st <- as.factor(rep(dimnames(CIs)$states, each=length(et(x))))
+                      ent.plot <- xyplot(y + y2 + y3 ~ xvals | f.st, allow.multiple=TRUE,
+                                         type="s", lty=c(1,2,2), col=c(1,2,2), ...)
+                      ent.plot <- update(ent.plot, main="Plot of Normalized State Exit Time Distributions",
+                                         xlab="Event Times", ylab="Normalized State Exit Time Distributions",
+                                         key = list(lines=list(col=c(1, 2, 2), lty=c(1, 2, 2)),
+                                             text=list(c("Est", "Lower CI", "Upper CI")),
+                                             columns=3))
+                      print(ent.plot)
+                  }  else {
+                      if (CI==TRUE)
+                          cat("Warning: 'Gnorm.var'  is NULL and therefore CIs not plotted. \n")
+                      ## Here select appropriate columns ...
+                      Dist <- Gnorm(x)[,paste("G", states),drop = FALSE]
+                      dimnames(Dist)[[2]]=gsub("G", "State", dimnames(Dist)[[2]])
+                      y <- as.vector(Dist)
+                      xvals <- rep(et(x), length(states))
+                      f.st <- as.factor(rep(dimnames(Dist)[[2]], each=length(et(x))))
+                      ent.plot <- xyplot(y ~ xvals | f.st, type="s", col=1, ...)
+                      ent.plot <- update(ent.plot, main="Plot of Normalized State Exit Time Distributions",
+                                         xlab="Event Times", ylab="Normalized State Exit Time Distributions",
+                                         key = list(lines=list(col=c(1), lty=c(1)), text=list(c("Est"))))
+                      print(ent.plot)
+                  }
+
               } ## end of exit.norm
 
           } ## end of function

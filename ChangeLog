@@ -1,4 +1,36 @@
 -------------------
+Version: 1.2-0
+Date: 2015-02-26
+
+	* Fixed estimation when state dependent censoring is
+	present. Now provide two functions 'DS.ind' and 'DS.dep' for
+	implementing Datta-Satten estimator (for independent censoring and
+	state-dependent censoring, respectively).  Also provided
+	illustration based on simulated data in updated vignette.
+	* Dropped the 'Cens' argument from 'DS.ind' and 'DS.dep'
+	(censoring state assumed to be '0' throughout)
+	* Fixed error in 'Pst' function so that time interval is now s <
+	time <= t (previously was s <= time <= t)
+	* The covariance matrix returned by 'Pst' is now for only a single
+	time point (time t)
+	* Modified 'Dist' function to only estimate entry / exit
+	distributions when appropriate.  That is, for non-recurrent states
+	with a unique path (consisting only of that state) between the
+	states before and after the given state.  Additionally, entry
+	distributions are not calculated for initial states and exit
+	distributions are not calculated for terminal states.  This
+	required corresponding changes to a number of functions including
+	'msSurv', 'EntryExit', 'Dist.CIs', 'BS.var', and the 'summary' and
+	'plot' methods for msSurv objects.
+	* A warning is given if left-truncation is present but the LT=TRUE
+	argument to 'msSurv' is not specified
+	* Fixed the title for the normalized state exit plots
+	* Added 'Rgraphviz' to the 'Depends' field in the DESCRIPTION file
+	* Fixed sum of transitions out of state at a given time to exclude
+	censoring events.  This caused issues in the variance calculations
+	of the AJ estimator when censored times were tied with event times.
+
+-------------------
 Version: 1.1-2
 Date: 2012-09-18
 

@@ -1,4 +1,6 @@
 importFrom(graphics, plot)
+importFrom(lattice, xyplot)
+import("methods", "class", "graph")
 exportClasses(msSurv)
 exportMethods(plot, print, summary, tree, ns, et, pos.trans, nt.states, dNs, Ys, sum_dNs, dNs.K, Ys.K,
               sum_dNs.K, ps, AJs, var.sop, cov.AJs, I.dA, cov.dA, Fnorm, Fsub, Gsub, Gnorm, Fnorm.var,

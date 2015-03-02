@@ -10,7 +10,7 @@ State Entry and Exit Time Distributions at Time t
   variance estimates if the user requests them.
 }
 \usage{
-EntryExit(object, t="last", deci=4, covar=FALSE, norm=TRUE)
+EntryExit(object, t="last", deci=4, var=FALSE, norm=TRUE)
 }
 
 \arguments{
@@ -23,7 +23,7 @@ EntryExit(object, t="last", deci=4, covar=FALSE, norm=TRUE)
   \item{deci}{
     Numeric argument specifying number of decimal places for estimates.  Default is 4.
   }
-  \item{covar}{
+  \item{var}{
     Logical argument to determine if the variance is displayed.  Default is FALSE.  If variance estimates are NULL, an error message will print.
   }
   \item{norm}{

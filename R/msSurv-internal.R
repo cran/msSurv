@@ -35,7 +35,7 @@ Add.States <- function(tree, LT) {
     Edges <- edges(tree)
     Edges[["0"]] <- character(0)
 
-    nt.states <- names(which(sapply(Edges, function(x) length(x)>0))) ## nontermewinal states
+    nt.states <- names(which(sapply(Edges, function(x) length(x)>0))) ## nonterminal states
 
     for (stage in nt.states) {
         Edges[[stage]] <- c("0", Edges[[stage]])
@@ -86,6 +86,11 @@ LT.Data <- function(Data) {
 ############################################################
 ##              Counting Process & At Risk                ##
 ############################################################
+
+####################################################################
+## NOTE - ASSUMES stage 0 is censoring - do we need to pass
+##        argument to allow otherwise??
+####################################################################
 
 ## Assuming stage 0 is censored and stage 1 is the initial state
 ## state 'LT' for left truncated data
@@ -167,9 +172,13 @@ CP <- function(tree, tree0, Data, nt.states) {
     a2 <- strsplit(colnames(dNs), " ")
     uni <- unique(sapply(a, function(x) x[2]))##  gives the unique states exiting
 
+    ## browser()
+    ## bug fix 02/17/2015
+    ## can't counting transitions into 'censored' as part of sum_dNs ...
+    ## NOTE - Need to change to '0' to 'Cens' ...
     for (i in uni) { ## calculating the dNi.s
         b <- which(sapply(a, function(x) x[2]==i))
-        b2 <- which(sapply(a2, function(x) x[2]==i))
+        b2 <- which(sapply(a2, function(x) x[2]==i & x[3]!=0))
         sum_dNs[, b] <- rowSums(dNs[, b2, drop=FALSE])
     } ## end of for loop for calculating dNi.s
 
@@ -182,7 +191,10 @@ CP <- function(tree, tree0, Data, nt.states) {
 ##            Datta-Satten Estimation                     ##
 ############################################################
 
-DS <- function(nt.states, dNs, sum_dNs, Ys, Cens="0", cens.type) {
+## for INDEPENDENT censoring
+## NOTE - Dropped 'Cens' argument (assumed to be 0) since don't allow
+##        this flexibility elsewhere
+DS.ind <- function(nt.states, dNs, sum_dNs, Ys) {
     ## Calculating dNs, sum_dNs, and Y from D-S(2001) paper
     ## Dividing dNs*, sum_dNs*, & Y* by K to get dNs^, sum_dNs^, & Ys^
     ## Make sure nt.states is from the non-LT
@@ -191,60 +203,203 @@ DS <- function(nt.states, dNs, sum_dNs, Ys, Cens="0", cens.type) {
     res2 <- strsplit(colnames(Ys), " ")  ## string split names of Ys
     res3 <- strsplit(colnames(sum_dNs), " ") ## string splits names of dNs
 
-    ##  looks at censored columns, needed for D-S est
-    DS.col.idx <- which(sapply(res, function(x) x[3]==Cens))
-    ##  looks at censored columns, needed for D-S est
+    ##  Column indicator for transitions into censored states, needed for D-S est
+    DS.col.idx <- which(sapply(res, function(x) x[3]==0))
+    ##  Indicator for total at-risk in each transition state
     DS2.col.idx <- which(sapply(res2, function(x) x[2]%in%nt.states))
-    ##  looks at censored columns, needed for D-S est
+    ##  Indicator for total transitions out of each transition state
     DS3.col.idx <- which(sapply(res3, function(x) x[2]%in%nt.states))
 
-    ## for INDEPENDENT censoring
-    if (cens.type=="ind") {
+    K <- vector(length=nrow(dNs))
+    dN0 <- rowSums(dNs[, DS.col.idx, drop=FALSE])
+    Y0 <- rowSums(Ys[, DS2.col.idx, drop=FALSE]) ## those at risk of being censored
+    N.Y <- ifelse(dN0/Y0=="NaN", 0, dN0/Y0)
+    colnames(N.Y) <- NULL
+    H.t <- cumsum(N.Y) ## calculating the hazard
+    k <- exp(-H.t)
+    K <- c(1, k[-length(k)])
 
-	K <- vector(length=nrow(dNs))
-	dN0 <- rowSums(dNs[, DS.col.idx, drop=FALSE])
-	Y0 <- rowSums(Ys[, DS2.col.idx, drop=FALSE]) ## those at risk of being censored
-	N.Y <- ifelse(dN0/Y0=="NaN", 0, dN0/Y0)
-	colnames(N.Y) <- NULL
-	H.t <- cumsum(N.Y) ## calculating the hazard
-	k <- exp(-H.t)
-	K <- c(1, k[-length(k)])
-
-	dNs.K <- dNs/K  ## D-S dNs
-	Ys.K <- Ys/K  ## D-S Ys
-        sum_dNs.K <- sum_dNs/K
-    } ## end of independent censoring
-
-
-    ## for DEPENDENT censoring
-    if (cens.type=="dep") {
-
-        dN0 <- dNs[, DS.col.idx]
-        Y0 <- Ys[, DS2.col.idx] ## those at risk of being censored
-
-        N.Y <- ifelse(dN0/Y0=="NaN", 0, dN0/Y0)
-	colnames(N.Y) <- paste(colnames(dN0), "/", colnames(Y0))
-
-        H.t <- apply(N.Y, 2, function(x) cumsum(x))
-        K <- exp(-H.t)
-        ## K <- apply(k, 2, function(x) c(1, x[-length(x)]))  ## maybe don't need
-
-	dNs.K <- dNs; Ys.K <- Ys; sum_dNs.K <- sum_dNs
-	for (i in nt.states) {
-            K.idx <- which(sapply(strsplit(colnames(N.Y), " "), function(x) x[2]==i))
-            dN.idx <- which(sapply(res, function(x) x[2]==i))
-            sum_dNs.idx <- which(sapply(res3, function(x) x[2]==i))
-            Ys.idx <- which(sapply(res2, function(x) x[2]==i))
-            dNs.K[, dN.idx] <- dNs[, dN.idx]/K[, K.idx]
-            sum_dNs.K[, sum_dNs.idx] <- sum_dNs[, sum_dNs.idx]/K[, K.idx]
-            Ys.K[, Ys.idx] <- Ys[, Ys.idx]/K[, K.idx]
-	}
-    } ## end of dependent censoring
+    dNs.K <- dNs/K ## D-S dNs
+    Ys.K <- Ys/K ## D-S Ys
+    sum_dNs.K <- sum_dNs/K
 
     res <- list(dNs.K=dNs.K, Ys.K=Ys.K, sum_dNs.K=sum_dNs.K)
     return(res)
 
-} ## end of D-S function
+}
+
+
+## for DEPENDENT censoring
+## NOTE - Dropped 'Cens' argument (assumed to be 0) since don't allow
+##        this flexibility elsewhere
+DS.dep <- function(Data, tree0, nt.states, dNs, sum_dNs, Ys, LT) {
+    ## tree0=tree for uncens, tree0=tree0 for cens, tree0=treeLT for LT
+
+    ####################################################################
+    ## STEPS in Dependent Censoring Case:
+    ## 1. Calculate state-dependent survival functions for censoring
+    ## 2. Calculate K_i(T_ik-) - Weighting (K) value for each individual
+    ##     i just prior to each of their observed transition times
+    ## 3. Calculate K_i(t-) - Weighting (K) value for each individual
+    ##     i at EVERY time prior to their observed censoring time (or last
+    ##     transition time if to terminal node)
+    ####################################################################
+
+
+    ####################################################################
+    ## 1. Calculate state-dependent survival functions for censoring
+    ####################################################################
+    res <- strsplit(colnames(dNs), " ") ## string splits names
+    res2 <- strsplit(colnames(Ys), " ")  ## string split names of Ys
+    res3 <- strsplit(colnames(sum_dNs), " ") ## string splits names of dNs
+
+    ##  Column indicator for transitions into censored states, needed for D-S est
+    DS.col.idx <- which(sapply(res, function(x) x[3]==0))
+    ##  Indicator for total at-risk in each transition state
+    DS2.col.idx <- which(sapply(res2, function(x) x[2]%in%nt.states))
+    ##  Indicator for total transitions out of each transition state
+    DS3.col.idx <- which(sapply(res3, function(x) x[2]%in%nt.states))
+
+    dN0 <- dNs[, DS.col.idx, drop=FALSE]  ## Think need the drop=FALSE option?
+    Y0 <- Ys[, DS2.col.idx, drop=FALSE] ## those at risk of being censored
+
+    N.Y <- ifelse(dN0/Y0=="NaN", 0, dN0/Y0)
+    colnames(N.Y) <- paste(colnames(dN0), "/", colnames(Y0))
+
+    H.t <- apply(N.Y, 2, function(x) cumsum(x))
+    Sj.cens <- exp(-H.t)   ## think need rbind(rep(1, XX), exp(-H.t))
+    Sj.cens <- rbind(rep(1, ncol(Sj.cens)), Sj.cens) ## [,-nrow(Sj.cens)])
+    rownames(Sj.cens)[1] <- 0
+    colnames(Sj.cens) <- sapply(res2, function(x) x[[2]])
+    times <- as.numeric(rownames(Sj.cens))
+
+
+    ####################################################################
+    ## 2. Calculate K_i(T_ik-) - Weighting (K) value for each individual
+    ##     i just prior to each of their observed transition times
+    ## 3. Calculate K_i(t-) - Weighting (K) value for each individual
+    ##     i at EVERY time prior to their observed censoring time (or last
+    ##     transition time if to terminal node)
+    ####################################################################
+
+    Data$dN.K <- rep(0, nrow(Data))
+    ## Default to 0 = censoring value
+
+    ## Need a matrix of states occupied by each subject at each time ...
+    state.mat <- matrix(0, nrow = length(unique(Data$id)), ncol = nrow(Sj.cens))
+    rownames(state.mat) <- unique(Data$id)
+    colnames(state.mat) <- rownames(Sj.cens)
+    ## Need a matrix of K values for each subject at each time ...
+    Y.K.mat <- matrix(0, nrow = length(unique(Data$id)), ncol = nrow(Sj.cens))
+    rownames(Y.K.mat) <- unique(Data$id)
+    colnames(Y.K.mat) <- rownames(Sj.cens)
+
+
+    for (i in 1:nrow(state.mat)) {  ## loop through subjects ...
+        idx.subj <- which(Data$id %in% rownames(state.mat)[i])
+        ## if (rownames(state.mat)[i] == 199) browser()
+
+        ## Find the indexes corresponding to observed times
+        if (!LT) {
+            x <- Data[idx.subj, ]
+            idx.time <- which(rownames(Sj.cens) %in% x$stop)
+        } else {
+            x <- Data[idx.subj[-1], ]
+            idx.time <- which(rownames(Sj.cens) %in% x$stop)
+            idx.start <- which(rownames(Sj.cens) == Data$stop[idx.subj][1])
+        }
+        ## NOTE - Presumes sorted by time so idx will be sorted also (should be the case)
+        for (j in 1:length(idx.time)) {
+
+            if (j == 1) {
+                ## Take idx.time[j]-1 because we want time just PRIOR ...
+                ## Here calculate for the dN.K's
+                col.idx <- which(colnames(Sj.cens) == x$start.stage[j])
+                x$dN.K[j] <- Sj.cens[(idx.time[j]-1), col.idx]
+                ## Here for calculating the Y.K's
+                ## NOTE - below method for storing 'state.mat' as character may not
+                ##        be most efficient and maybe can change to POSITION of 'nt.states'
+                ##        Need to be careful of order though
+                ## NOTE - Here modify to account for LT (replace '1' with something else for LT)
+                if (!LT) {
+                    state.mat[i, 1:(idx.time[j]-1)] <- as.character(x$start.stage[j])
+                    Y.K.mat[i, 1:(idx.time[j]-1)] <- Sj.cens[1:(idx.time[j]-1), col.idx]
+                } else {
+                    state.mat[i, idx.start:(idx.time[j]-1)] <- as.character(x$start.stage[j])
+                    Y.K.mat[i, idx.start:(idx.time[j]-1)] <- Sj.cens[idx.start:(idx.time[j]-1), col.idx]
+                }
+
+            } else {
+                ## Here calculate for the dN.K's
+                ## Note the inclusion of the 'correction' factor:
+                ##    S_{stage,C}(idx.time[j]) / S_{stage,C}(idx.time[j-1])
+                ## This accounts for past transition history of subject i
+                col.idx <- which(colnames(Sj.cens) == x$start.stage[j])
+                x$dN.K[j] <- x$dN.K[(j-1)] * (Sj.cens[(idx.time[j]-1), col.idx]) /
+                    (Sj.cens[(idx.time[j-1]-1), col.idx])
+                ## Here for calculating the Y.K's
+                state.mat[i, idx.time[j-1]:(idx.time[j]-1)] <- as.character(x$start.stage[j])
+                Y.K.mat[i, idx.time[j-1]:(idx.time[j]-1)] <- Sj.cens[idx.time[j-1]:(idx.time[j]-1), col.idx] *
+                                                               x$dN.K[(j-1)] /
+                                                                  (Sj.cens[(idx.time[j-1]-1), col.idx])
+            }
+        }  ## End of 'j' loop (time)
+        if (!LT) {
+            Data$dN.K[idx.subj] <- x$dN.K
+        } else {
+            Data$dN.K[idx.subj[-1]] <- x$dN.K
+        }
+    }  ## End of 'i' loop (subject)
+
+
+    ## Calculations for Ys.K
+    ## Need to sum up 1/K's
+    Ys.K <- Ys
+    for (i in nt.states) {
+        K.idx <- which(sapply(strsplit(colnames(N.Y), " "), function(x) x[2]==i))
+        Ys.idx <- which(sapply(res2, function(x) x[2]==i))
+        ## dNs.K[, dN.idx] <- dNs[, dN.idx]/K[, K.idx]
+        ## sum_dNs.K[, sum_dNs.idx] <- sum_dNs[, sum_dNs.idx]/K[, K.idx]
+        ## THIS SHOULD WORK FOR Ys.K ...
+        Ys.K[, Ys.idx] <- colSums((state.mat[,-ncol(state.mat)]==i) * 1/Y.K.mat[,-ncol(Y.K.mat)], na.rm=TRUE)
+        ## Ys[, Ys.idx]/K[, K.idx]
+    }
+
+    ## Calculations for transitions 'dNs'
+    dNs.K <- dNs
+    nodes.into <- nodes(tree0)[sapply(inEdges(tree0), function(x) length(x) > 0)]
+    ## Outer loop = all nodes w/transitions into them
+    for (i in nodes.into) {
+        ## Inner loop = all nodes which transition into node i
+        nodes.from <- inEdges(tree0)[[i]]
+        for (j in nodes.from) {
+            nam2 <- paste("dN", j, i)
+            idx <- which(Data$end.stage==i & Data$start.stage==j)
+            tmp.dNK <- tapply(Data$dN.K[idx][!Data$stop[idx]==0],
+                              Data$stop[idx][!Data$stop[idx]==0],
+                              function(x) sum(1/x))
+            dNs.K[names(tmp.dNK), nam2] <- tmp.dNK
+        }
+    }
+
+    ## Now calculate for SUM of dNs.K (sum_dNs.K)
+    ## Counting transitions from different states (ie: state sums)
+    sum_dNs.K <- matrix(nrow=nrow(dNs.K), ncol=length(nt.states))
+    rownames(sum_dNs.K) <- rownames(dNs.K) ##
+    colnames(sum_dNs.K) <- paste("dN", nt.states, ".")
+    a <- strsplit(colnames(sum_dNs.K), " ")
+    a2 <- strsplit(colnames(dNs.K), " ")
+    uni <- unique(sapply(a, function(x) x[2])) ## gives the unique states exiting
+    for (i in uni) { ## calculating the dNi.s
+        b <- which(sapply(a, function(x) x[2]==i))
+        b2 <- which(sapply(a2, function(x) x[2]==i))
+        sum_dNs.K[, b] <- rowSums(dNs.K[, b2, drop=FALSE])
+    } ## end of for loop for calculating dNi.s
+
+    res <- list(dNs.K=dNs.K, Ys.K=Ys.K, sum_dNs.K=sum_dNs.K)
+    return(res)
+}
+
 
 ############################################################
 ##           Reducing dNs & Ys to event times             ##
@@ -301,6 +456,7 @@ AJ.estimator <- function(ns, tree, dNs.et, Ys.et, start.probs) {
 
     for (i in 1:nrow(dNs.et)) { ##loop through times
 
+
         I.dA <- diag(ns) ## creates trans matrix for current time
         dA <- matrix(0, nrow=ns, ncol=ns)
         colnames(I.dA) <- rownames(I.dA) <- colnames(dA) <- rownames(dA) <- nodes(tree)
@@ -345,41 +501,95 @@ Dist <- function(ps, ns, tree) {
     ## ps from AJ.estimator function
     ## tree needs to be uncensored tree
 
-    initial <- which(sapply(inEdges(tree), function(x) !length(x)>0)) ## initial states, no Fs
-    terminal <- which(sapply(edges(tree), function(x) !length(x)>0)) ## terminal states, no Gs
+    ## Recursive function to detect whether system is cyclic
+    downstream <- function(nodes, tree) {
+        all.edges <- unique(unlist(edges(tree)[nodes]))
+        all.edges <- all.edges[!(all.edges %in% all.nodes)] ## remove nodes already visited
+        if (length(all.edges) == 0) {
+            return(NULL)
+        } else {
+            all.nodes <<- c(all.nodes, all.edges)
+            return(c(all.edges, downstream(all.edges, tree)))
+        }
+    }
 
-    Fnorm <- Fsub <- matrix(0, nrow=nrow(ps), ncol=ns) ## entry distn
+
+    later.nodes <- vector("list", ns)
+    recur <- logical(ns)
+    names(later.nodes) <- names(recur) <- nodes(tree)
+    for (node in nodes(tree)) {
+        all.nodes <- c()
+        later.nodes[[node]] <- downstream(node, tree)
+        recur[node] <- node %in% later.nodes[[node]]
+    }
+    ## NOTE - later.nodes truncated to length of those states HAVING downstream nodes
+
+    ## separated = TRUE if boundary for later nodes of given node is unique
+    ##        OR = TRUE if node is TERMINAL node
+    separated <- logical(ns)
+    names(separated) <- nodes(tree)
+    for (i in 1:length(later.nodes)) {
+        tmp <- boundary(later.nodes[[i]], tree)
+        node <- names(later.nodes)[i]
+        separated[node] <- (length(unique(unlist(tmp))) == 1) ## TRUE if separated
+    }
+    terminal <- names(separated)[!names(separated) %in% names(later.nodes)]
+    separated[terminal] <- TRUE
+
+    ## Estimate for states with recur == FALSE and separated = TRUE
+    est.states <- !recur & separated
+    if (sum(est.states) == 0) {
+        cat("No states eligible for entry/exit distribution calculation. \n")
+        return(list(Fnorm=NULL, Gsub=NULL, Fsub=NULL, Gnorm=NULL))
+    }
+
+    ## initial states have no Fs (entry dist)
+    Fs.states <- which(!sapply(inEdges(tree), function(x) !length(x)>0) & est.states)
+
+    ## terminal states have no Gs (exit dist)
+    Gs.states <- which(!sapply(edges(tree), function(x) !length(x)>0) & est.states)
+    ## NOTE - Fs.states and Gs.states give POSITION of node
+
+    Fnorm <- Fsub <- matrix(0, nrow=nrow(ps), ncol=length(Fs.states)) ## entry distn
     rownames(Fnorm) <- rownames(Fsub) <- rownames(ps)
-    colnames(Fnorm) <- colnames(Fsub) <- paste("F", nodes(tree))
+    colnames(Fnorm) <- colnames(Fsub) <- paste("F", nodes(tree)[Fs.states])
 
-    Gsub <- Gnorm <- matrix(0, nrow=nrow(ps), ncol=ns) ## exit distn
+    Gsub <- Gnorm <- matrix(0, nrow=nrow(ps), ncol=length(Gs.states)) ## exit distn
     rownames(Gnorm) <- rownames(Gsub) <- rownames(ps)
-    colnames(Gnorm) <- colnames(Gsub) <- paste("G", nodes(tree))
+    colnames(Gnorm) <- colnames(Gsub) <- paste("G", nodes(tree)[Gs.states])
 
-    ## looping through nodes
-    for (i in 1:ns) {
-        node <- nodes(tree)[i]
-        later.stages <- names(acc(tree, node)[[1]])
-        stages <- c(node, later.stages)
+    ## Fs (entry dist) calculation
+    if (length(Fs.states) > 0) {
+         cat("\nEntry distributions calculated for states", nodes(tree)[Fs.states], ".\n")
+        for (i in 1:length(Fs.states)) {
+            node <- nodes(tree)[Fs.states[i]]
+            later.stages <- names(acc(tree, node)[[1]])
+            stages <- c(node, later.stages)
 
-        Fsub[, i] <- f.numer <- rowSums(ps[, paste("p", stages), drop=FALSE])
-        Fnorm[, i] <- f.numer/f.numer[length(f.numer)]
+            Fsub[, i] <- f.numer <- rowSums(ps[, paste("p", stages), drop=FALSE])
+            Fnorm[, i] <- f.numer/f.numer[length(f.numer)]
+        }
+    } else {
+        cat("\nNo states eligible for entry distribution calculation.\n")
+        Fsub <- Fnorm <- NULL
+    }
 
-        if (length(stages)==1) next
+    ## Gs (exit dist) calculation
+    if (length(Gs.states) > 0) {
+        cat("\nExit distributions calculated for states", nodes(tree)[Gs.states], ".\n")
+        for (i in 1:length(Gs.states)) {
+            node <- nodes(tree)[Gs.states[i]]
+            later.stages <- names(acc(tree, node)[[1]])
+            stages <- c(node, later.stages)
+            f.numer <- rowSums(ps[, paste("p", stages), drop=FALSE])
 
-        Gsub[, i] <- g.numer <- rowSums(ps[, paste("p", later.stages), drop=FALSE])
-        Gnorm[, i] <- g.numer/f.numer[length(f.numer)]
-
-
-    } ## end of for loop
-
-    Fr <- strsplit(colnames(Fnorm), " ")
-    Fs.idx <- which(sapply(Fr, function(x) x[2]%in%names(initial)))
-    Fnorm[, Fs.idx] <- Fsub[, Fs.idx] <- NA
-
-    Gr <- strsplit(colnames(Gnorm), " ")
-    Gs.idx <- which(sapply(Gr, function(x) x[2]%in%names(terminal)))
-    Gnorm[, Gs.idx]<- Gsub[, Gs.idx] <- NA
+            Gsub[, i] <- g.numer <- rowSums(ps[, paste("p", later.stages), drop=FALSE])
+            Gnorm[, i] <- g.numer/f.numer[length(f.numer)]
+        }
+    } else {
+        cat("\nNo states eligible for exit distribution calculation.\n")
+        Gsub <- Gnorm <- NULL
+    }
 
     list(Fnorm=Fnorm, Gsub=Gsub, Fsub=Fsub, Gnorm=Gnorm)
 } ## end of function
@@ -442,6 +652,7 @@ var.fn <- function(tree, ns, nt.states, dNs.et, Ys.et, sum_dNs, AJs, I.dA, ps) {
         	  	tm[j, k] <- 0
 	        	next
                     }
+
 
                     if (statej == outer & statek == outer) {  ## 3rd formula
 			tm[j, k] <- (Ys.et[i, outer.Ys] - sum_dNs[i, outer.sum_dNs])*sum_dNs[i, outer.sum_dNs] / Ys.et[i, outer.Ys]^3
@@ -513,7 +724,14 @@ var.fn <- function(tree, ns, nt.states, dNs.et, Ys.et, sum_dNs, AJs, I.dA, ps) {
 ## 2. Entry / Exit functions
 ## 3. SOPs when > 1 starting state
 
-BS.var <- function(Data, tree, ns, et, cens.type, B, LT) {
+BS.var <- function(Data, tree, ns, et, cens.type, B, LT, entry.states, exit.states) {
+
+    if(!is.null(entry.states))
+        entry.states <- sapply(strsplit(entry.states, " "), function(x) x[2])
+
+    if(!is.null(exit.states))
+        exit.states <- sapply(strsplit(exit.states, " "), function(x) x[2])
+
 
     n <- length(unique(Data$id)) ## sample size
     ids <- unique(Data$id)
@@ -526,13 +744,24 @@ BS.var <- function(Data, tree, ns, et, cens.type, B, LT) {
     colnames(bs.ps) <- paste("p", nodes(tree))
 
     ## For entry / exit distributions
-    bs.Fnorm <- bs.Fsub <- bs.ps; bs.Gnorm <- bs.Gsub <- bs.ps ## storage for BS entry/exit
-    colnames(bs.Fnorm) <- colnames(bs.Fsub) <- paste("F", nodes(tree))
-    colnames(bs.Gnorm) <- colnames(bs.Gsub) <- paste("G", nodes(tree))
-    initial <- which(sapply(inEdges(tree), function(x) !length(x) > 0)) ## initial states, no Fs (entry)
-    terminal <- which(sapply(edges(tree), function(x) !length(x) > 0)) ## terminal states, no Gs (exit)
+    if (!is.null(entry.states)) {
+        bs.Fnorm <- bs.Fsub <- array(dim=c(length(et), length(entry.states), B))
+        colnames(bs.Fnorm) <- colnames(bs.Fsub) <- paste("F", entry.states)
+    } else {
+        bs.Fnorm <- bs.Fsub <- NULL
+    }
+    if (!is.null(exit.states)) {
+        bs.Gnorm <- bs.Gsub <- array(dim=c(length(et), length(exit.states), B))
+        colnames(bs.Gnorm) <- colnames(bs.Gsub) <- paste("G", exit.states)
+    } else {
+        bs.Gnorm <- bs.Gsub <- NULL
+    }
 
-    bs.var.sop <- matrix(0, nrow=length(et), ncol=ns) ## matrix for var matrix of state occup prob
+    ## initial <- which(sapply(inEdges(tree), function(x) !length(x) > 0)) ## initial states, no Fs (entry)
+    ## terminal <- which(sapply(edges(tree), function(x) !length(x) > 0)) ## terminal states, no Gs (exit)
+
+    ## matrix for var matrix of state occup prob
+    bs.var.sop <- matrix(0, nrow=length(et), ncol=ns)
     colnames(bs.var.sop) <- paste("Var", "p", nodes(tree))
     rownames(bs.var.sop) <- et
 
@@ -584,8 +813,18 @@ BS.var <- function(Data, tree, ns, et, cens.type, B, LT) {
             cp <- CP(tree, Cens$tree0, Data.bs, Cens$nt.states)
         }
 
-        ds.est <- DS(Cens$nt.states, cp$dNs, cp$sum_dNs,
-                     cp$Ys, Cens="0", cens.type)
+        if (cens.type == "ind") {
+            ds.est <- DS.ind(Cens$nt.states, cp$dNs, cp$sum_dNs,
+                             cp$Ys)
+        } else {
+            if (LT) {
+                ds.est <- DS.dep(Data.bs, Cens$treeLT, Cens$nt.states.LT, cp$dNs,
+                                 cp$sum_dNs, cp$Ys, LT)
+            } else {
+                ds.est <- DS.dep(Data.bs, Cens$tree0, Cens$nt.states, cp$dNs,
+                                 cp$sum_dNs, cp$Ys, LT)
+            }
+        }
         cp.red <- Red(tree, cp$dNs, cp$Ys, cp$sum_dNs, ds.est$dNs.K,
                       ds.est$Ys.K, ds.est$sum_dNs.K)
         AJest <- AJ.estimator(ns, tree, cp.red$dNs.K, cp.red$Ys.K, start.probs)
@@ -606,35 +845,61 @@ BS.var <- function(Data, tree, ns, et, cens.type, B, LT) {
         ## looks ok
 
         ## Entry / Exit variance as well
-        for (i in 1:ns) {## looping through nodes
-            node <- nodes(tree)[i]
-            later.stages <- names(acc(tree, node)[[1]])
-            stages <- c(node, later.stages)
-            bs.f.numer <- rowSums(bs.ps[, paste("p", stages), b, drop=FALSE])
-            ## adding bs.Fsub
-            if (sum(bs.f.numer)==0)  bs.Fnorm[, i, b] <- bs.Fsub[, i, b] <- 0  else {
-                bs.Fsub[, i, b] <- bs.f.numer
-                bs.Fnorm[, i, b] <- bs.f.numer/bs.f.numer[length(bs.f.numer)]}
-            if (length(stages)==1) next
-            bs.g.numer <- rowSums(bs.ps[, paste("p", later.stages), b, drop=FALSE])
-            if (sum(bs.g.numer)==0)  bs.Gnorm[, i, b] <- bs.Gsub[, i, b] <- 0 else {
-                bs.Gsub[, i, b] <- bs.g.numer
-                bs.Gnorm[, i, b] <- bs.g.numer/bs.g.numer[length(bs.g.numer)]}
-        } ## end of for loop
+        ## Fs (entry dist) calculation
+        if (!is.null(entry.states)) {
+            for (i in 1:length(entry.states)) {
+                node <- entry.states[i]
+                later.stages <- names(acc(tree, node)[[1]])
+                stages <- c(node, later.stages)
+                bs.f.numer <- rowSums(bs.ps[, paste("p", stages), b, drop=FALSE])
+
+                if (sum(bs.f.numer)==0)  bs.Fnorm[, i, b] <- bs.Fsub[, i, b] <- 0  else {
+                    bs.Fsub[, i, b] <- bs.f.numer
+                    bs.Fnorm[, i, b] <- bs.f.numer/bs.f.numer[length(bs.f.numer)]}
+            }
+        }
+        ## Gs (exit dist) calculation
+        if (!is.null(exit.states)) {
+            for (i in 1:length(exit.states)) {
+                node <- exit.states[i]
+                later.stages <- names(acc(tree, node)[[1]])
+                stages <- c(node, later.stages)
+                bs.f.numer <- rowSums(bs.ps[, paste("p", stages), b, drop=FALSE])
+                bs.g.numer <- rowSums(bs.ps[, paste("p", later.stages), b, drop=FALSE])
+
+                if (sum(bs.g.numer)==0)  bs.Gnorm[, i, b] <- bs.Gsub[, i, b] <- 0 else {
+                    bs.Gsub[, i, b] <- bs.g.numer
+                    ## 02/25/15 - note bug here used bs.g.numer in denominator previously
+                    bs.Gnorm[, i, b] <- bs.g.numer/bs.f.numer[length(bs.f.numer)]}
+            } ## end of for loop
+        }
 
     } ## end of bs loop
 
     ## Normalized entry / exit
-    Fnorm.var <- apply(bs.Fnorm, c(1, 2), var)
-    Fnorm.var[, initial] <- NA ## setting the initial state variances = NA
-    Gnorm.var <- apply(bs.Gnorm, c(1, 2), var)
-    Gnorm.var[, terminal] <- NA ## setting distn for terminal states to NA since don't exist
+    ## NOTE - dimension kept when using apply
+    if (!is.null(bs.Fnorm)) {
+        Fnorm.var <- apply(bs.Fnorm, c(1, 2), var)
+    } else {
+        Fnorm.var <- NULL
+    }
+    if (!is.null(bs.Gnorm)) {
+        Gnorm.var <- apply(bs.Gnorm, c(1, 2), var)
+    } else {
+        Gnorm.var <- NULL
+    }
 
     ## Subdistribution entry / exit
-    Fsub.var <- apply(bs.Fsub, c(1, 2), var)
-    Fsub.var[, initial] <- NA
-    Gsub.var <- apply(bs.Gsub, c(1, 2), var)
-    Gsub.var[, terminal] <- NA
+    if (!is.null(bs.Fsub)) {
+        Fsub.var <- apply(bs.Fsub, c(1, 2), var)
+    } else {
+        Fsub.var <- NULL
+    }
+    if (!is.null(bs.Gsub)) {
+        Gsub.var <- apply(bs.Gsub, c(1, 2), var)
+    } else {
+        Gsub.var <- NULL
+    }
 
     ## SOP's
     bs.var.sop <- apply(bs.ps, c(1, 2), var)
@@ -762,57 +1027,61 @@ MSM.CIs <- function(x, ci.level=0.95, ci.trans="linear", trans=TRUE, sop=TRUE) {
 ####################################################################
 
 
-Dist.CIs <- function(x, ci.level=0.95, ci.trans="linear", norm=TRUE) {
+## NOTE - Currently Dist.CIs only called from plot method for msSurv object
+##        x = msSurv object
+##        type = plot.type = "entry.sub", "entry.norm", "exit.sub", or "exit.norm"
+##        states = requested states for CI calculation
+
+Dist.CIs <- function(x, ci.level=0.95, ci.trans="linear", type, states) {
 
     z.alpha <- qnorm(ci.level + (1 - ci.level) / 2)
 
     ci.trans <- match.arg(ci.trans, c("linear", "log", "cloglog", "log-log"))
+    type <- match.arg(type, c("entry.sub", "entry.norm", "exit.sub", "exit.norm"))
 
-    CI.Fs <- array(0, dim=c(length(et(x)), 3, length(nodes(tree(x)))),
-                   dimnames=list(rows=et(x), cols=c("est", "lower limit", "upper limit"),
-                   state=paste("F", nodes(tree(x)))))
-    CI.Gs <- array(0, dim=c(length(et(x)), 3, length(nodes(tree(x)))),
-                   dimnames=list(rows=et(x), cols=c("est", "lower limit", "upper limit"),
-                   state=paste("G", nodes(tree(x)))))
+    CI.Dist <- array(0, dim=c(length(et(x)), 3, length(states)),
+                     dimnames=list(rows=et(x), cols=c("est", "lower limit", "upper limit"),
+                         states=states))
+    switch(type[1],
+           "entry.sub" = {
+               F.states <- paste("F", states)
+               CI.Dist[,1,] <- Fsub(x)[,F.states]
+               Dist.var <- Fsub.var(x)[,F.states]},
+           "entry.norm" = {
+               F.states <- paste("F", states)
+               CI.Dist[,1,] <- Fnorm(x)[,F.states]
+               Dist.var <- Fnorm.var(x)[,F.states]},
+           "exit.sub" = {
+               G.states <- paste("G", states)
+               CI.Dist[,1,] <- Gsub(x)[,G.states]
+               Dist.var <- Gsub.var(x)[,G.states]},
+           "exit.norm" = {
+               G.states <- paste("G", states)
+               CI.Dist[,1,] <- Gnorm(x)[,G.states]
+               Dist.var <- Gnorm.var(x)[,G.states]
+           })
 
-    if (norm) {
-	CI.Fs[,1,] <- Fnorm(x); CI.Gs[,1,] <- Gnorm(x)
-        Fs.var <- Fnorm.var(x); Gs.var <- Gnorm.var(x)
-    } else {
-        CI.Fs[,1,] <- Fsub(x); CI.Gs[,1,] <- Gsub(x)
-        Fs.var <- Fsub.var(x); Gs.var <- Gsub.var(x)
-    }
 
     switch(ci.trans[1],
            "linear" = {
-               CI.Fs[ , 2, ] <- CI.Fs[,1,] - z.alpha * sqrt(Fs.var)
-               CI.Fs[ , 3, ] <- CI.Fs[,1,] + z.alpha * sqrt(Fs.var)
-               CI.Gs[ , 2, ] <- CI.Gs[,1,] - z.alpha * sqrt(Gs.var)
-               CI.Gs[ , 3, ] <- CI.Gs[,1,] + z.alpha * sqrt(Gs.var)},
+               CI.Dist[ , 2, ] <- CI.Dist[,1,] - z.alpha * sqrt(Dist.var)
+               CI.Dist[ , 3, ] <- CI.Dist[,1,] + z.alpha * sqrt(Dist.var)},
            "log" = {
-               CI.Fs[ , 2, ] <- exp(log(CI.Fs[,1,]) - z.alpha * sqrt(Fs.var) / CI.Fs[,1,])
-               CI.Fs[ , 3, ] <- exp(log(CI.Fs[,1,]) + z.alpha * sqrt(Fs.var) / CI.Fs[,1,])
-               CI.Gs[ , 2, ] <- exp(log(CI.Gs[,1,]) - z.alpha * sqrt(Gs.var) / CI.Gs[,1,])
-               CI.Gs[ , 3, ] <- exp(log(CI.Gs[,1,]) + z.alpha * sqrt(Gs.var) / CI.Gs[,1,])},
+               CI.Dist[ , 2, ] <- exp(log(CI.Dist[,1,]) - z.alpha * sqrt(Dist.var) / CI.Dist[,1,])
+               CI.Dist[ , 3, ] <- exp(log(CI.Dist[,1,]) + z.alpha * sqrt(Dist.var) / CI.Dist[,1,])},
            "cloglog" = {
-               CI.Fs[ , 2, ] <- 1 - (1 - CI.Fs[,1,])^(exp(z.alpha * (sqrt(Fs.var) / ((1 - CI.Fs[,1,]) * log(1 - CI.Fs[,1,])))))
-               CI.Fs[ , 3, ] <- 1 - (1 - CI.Fs[,1,])^(exp(-z.alpha * (sqrt(Fs.var) / ((1 - CI.Fs[,1,]) * log(1 - CI.Fs[,1,])))))
-               CI.Gs[ , 2, ] <- 1 - (1 - CI.Gs[,1,])^(exp(z.alpha * (sqrt(Gs.var) / ((1 - CI.Gs[,1,]) * log(1 - CI.Gs[,1,])))))
-               CI.Gs[ , 3, ] <- 1 - (1 - CI.Gs[,1,])^(exp(-z.alpha * (sqrt(Gs.var) / ((1 - CI.Gs[,1,]) * log(1 - CI.Gs[,1,])))))},
+               CI.Dist[ , 2, ] <- 1 - (1 - CI.Dist[,1,])^(exp(z.alpha * (sqrt(Dist.var) / ((1 - CI.Dist[,1,]) * log(1 - CI.Dist[,1,])))))
+               CI.Dist[ , 3, ] <- 1 - (1 - CI.Dist[,1,])^(exp(-z.alpha * (sqrt(Dist.var) / ((1 - CI.Dist[,1,]) * log(1 - CI.Dist[,1,])))))},
            "log-log" = {
-               CI.Fs[ , 2, ] <- CI.Fs[,1,]^(exp(-z.alpha * (sqrt(Fs.var) / (CI.Fs[,1,] * log(CI.Fs[,1,])))))
-               CI.Fs[ , 3, ] <- CI.Fs[,1,]^(exp(z.alpha * (sqrt(Fs.var) / (CI.Fs[,1,] * log(CI.Fs[,1,])))))
-               CI.Gs[ , 2, ] <- CI.Gs[,1,]^(exp(-z.alpha * (sqrt(Gs.var) / (CI.Gs[,1,] * log(CI.Gs[,1,])))))
-               CI.Gs[ , 3, ] <- CI.Gs[,1,]^(exp(z.alpha * (sqrt(Gs.var) / (CI.Gs[,1,] * log(CI.Gs[,1,])))))})
+               CI.Dist[ , 2, ] <- CI.Dist[,1,]^(exp(-z.alpha * (sqrt(Dist.var) / (CI.Dist[,1,] * log(CI.Dist[,1,])))))
+               CI.Dist[ , 3, ] <- CI.Dist[,1,]^(exp(z.alpha * (sqrt(Dist.var) / (CI.Dist[,1,] * log(CI.Dist[,1,])))))
+           })
 
-    for (j in 1:length(nodes(tree(x)))) {
-        CI.Fs[ , 2, j] <- pmax(CI.Fs[ , 2, j], 0)
-        CI.Fs[ , 3, j] <- pmin(CI.Fs[ , 3, j], 1)
-
-        CI.Gs[ , 2, j] <- pmax(CI.Gs[ , 2, j], 0)
-        CI.Gs[ , 3, j] <- pmin(CI.Gs[ , 3, j], 1)
+    for (j in 1:length(states)) {
+        CI.Dist[ , 2, j] <- pmax(CI.Dist[ , 2, j], 0)
+        CI.Dist[ , 3, j] <- pmin(CI.Dist[ , 3, j], 1)
     }
 
-list(CI.Fs=CI.Fs, CI.Gs=CI.Gs)
+    return(CI.Dist)
 
 } ## end of function

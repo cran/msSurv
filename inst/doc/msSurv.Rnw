@@ -179,14 +179,15 @@ We assume left truncation occurs with respect to the
 total time of an individual in the multistate system, so that
 individuals are not considered for the estimation of transitions prior
 to their left truncation time.  The main function \rf{msSurv()}
-calculates and returns the marginal state occupation probabilities and
-state entry and exit time distributions for a general, possibly
-non-Markov, multistate system, and provides additional features not
-currently found in  other \proglang{R} packages.  The function also
-calculates and returns the
+calculates and returns the marginal state occupation probabilities
+for a general, possibly
+non-Markov, multistate system, and provides features not
+currently found in  other \proglang{R} packages.
+Additionally, state entry and exit time distributions are calculated
+and returned for states where it is appropriate.
+The function also calculates and returns the
 marginal integrated transition hazards and the hazard rate functions, and for
-a Markov model, the
-transition probability matrix between any two times.
+a Markov model, the transition probability matrix between any two times.
 Users specify whether the censoring is independent or state dependent and then
 appropriate calculations of variance and confidence intervals are
 performed.  Pointwise confidence intervals for the above mentioned
@@ -234,24 +235,15 @@ an indicator of whether the $i$th individual was never censored,
 e.g., $\delta_{i}=I(C_{i}>T_{i}^\ast)$, and let $T_{i}=\min(T_{i}^\ast,C_{i})$.
 
 
-The censoring hazard is independent of the multistate system when
-\begin{eqnarray*}
-\lefteqn{\lim_{dt\rightarrow
-    0}\frac{Pr\left(C_i\in[t,t+dt),\delta_i=0|T_i\geq
-      t>L_i,\boldsymbol{T}^{\boldsymbol{\ast}}_{\boldsymbol{i}},
-      \boldsymbol{s}^\ast_{i}\right)}{dt} \;\; = } \hspace{6cm} \\
-& & \lim_{dt \rightarrow
-  0}\frac{Pr\left(C_i\in[t,t+dt),\delta_i=0|T_i\geq t>  L_i\right)}{dt}
-\end{eqnarray*}
-
-\citep{DS2001,DS2002}.  There are times when censoring and  hazards
+Usually, one assumes that censoring is independent of the multistate
+system.  However, there are times when censoring and  hazards
 of future transitions are affected by time varying covariates
 $Z\,=\,Z\left(t\right)$. In these cases, the
- covariate variables $Z$ explain the dependence and thus future
- transitions and censoring events behave conditionally
- independent given the covariate process $Z$ \citep{DS2002}.
- Modeling of this censoring hazard using the covariate process is
- discussed in Section~\ref{subsec:DS}.
+covariate variables $Z$ explain the dependence and thus future
+transitions and censoring events behave conditionally
+independent given the covariate process $Z$ \citep{DS2001, DS2002}.
+Modeling of this censoring hazard using the covariate process is
+discussed in Section~\ref{subsec:DS}.
 
 
 \subsection{Nelson-Aalen and Aalen-Johansen estimators}
@@ -373,7 +365,9 @@ t>L_i,\boldsymbol{Z}_i\left(t\right),\boldsymbol{T}^\ast_i,\boldsymbol{s}^\ast_i
 
 For state dependent right censoring (i.e., when $Z(t) = s(t)$), this
 is equivalent to estimating the censoring hazard by a state specific
-Nelson-Aalen estimator of censoring \citep{DS2002}.
+Nelson-Aalen estimator of censoring \citep{DS2002}.  Currently, the
+\pkg{msSurv} package only implements this type of dependent
+censoring.
 
 Substituting the formulas for the estimated counting process and the
 number at risk into Equations~\ref{eq:NA}, \ref{eq:AJ}, and \ref{eq:ps} yields the
@@ -392,9 +386,13 @@ the bootstrap.
 \label{subsec:FsGs}
 
 An important application of state occupation probabilities is computing
-the state entry and exit time distribution functions.  We assume an acyclic
-system.  Suppose $X_j$
-denotes the possibly unobserved indicator of an individual ever
+the state entry and exit time distribution functions.
+We assume that the only path between the states before and after the
+state of interest (e.g., state $j$) is through state $j$, and that the
+system is acyclic with respect to state $j$ (i.e., it is not possible
+to return to state $j$ after leaving it).
+% We assume an acyclic system.
+Suppose $X_j$ denotes the possibly unobserved indicator of an individual ever
 entering state $j$. Suppose $F_j$ and $G_j$ denote the state entry and
 exit time distribution functions, respectively, for the individuals
 who ever enter state $j$ (i.e., $X_j=1$).  Let $\mathcal{S}^j$ denote
@@ -718,7 +716,7 @@ EntryExit(ex1, t = 1)
 The bootstrap (via the \rfarg{bs = TRUE} argument in the call to \rf{msSurv})
 is needed to obtain variance estimates for the state entry and exit
 time distributions. If this was done, then
-the \rfarg{covar = TRUE} argument in the call to the \rf{EntryExit}
+the \rfarg{var = TRUE} argument in the call to the \rf{EntryExit}
 function can be used to display the variance estimates.
 Note that all of the function \rf{Pst}, \rf{SOPt}, and \rf{EntryExit}
 return their results invisibly, so that users can save and access the
@@ -733,8 +731,8 @@ of `\ro{norm}'.
 
 
 <<EntryExitObjs, eval=TRUE, results=hide>>=
-norm.dist <- EntryExit(ex1, t = 1, covar = TRUE)
-sub.dist  <- EntryExit(ex1, t = 1, norm = FALSE, covar = TRUE)
+norm.dist <- EntryExit(ex1, t = 1, var = TRUE)
+sub.dist  <- EntryExit(ex1, t = 1, norm = FALSE, var = TRUE)
 @
 <<EntryExitOutput, eval=TRUE>>=
 names(norm.dist)
@@ -1080,18 +1078,19 @@ corresponding 95\% linear confidence intervals. For state dependent
 censoring, these confidence intervals are based on variances obtained
 through bootstrapping.  Each state is plotted
 separately in a single panel.  The results are given in
-Figure~\ref{fig:ex3plot}.
-<<ex3plot, fig=TRUE, eval=TRUE, include=FALSE>>=
+Figure~\ref{fig:DepExSOP}.
+
+<<DepExSOP, fig=TRUE, eval=TRUE, include=FALSE>>=
 if(exists("DepEx")) plot(DepEx)
 @
 
 \begin{figure}[ht]
 \begin{center}
-  \includegraphics[height=5in,width=5in]{"msSurv-ex3plot"}
+  \includegraphics[height=5in,width=5in]{"msSurv-DepExSOP"}
   \caption{Plot of state occupation probability estimates and
     corresponding confidence intervals for each state in the system
     illustrated in Figure~\ref{fig:depcensimage}.}
-  \label{fig:ex3plot}
+  \label{fig:DepExSOP}
 \end{center}
 \end{figure}
 
@@ -1137,85 +1136,160 @@ confidence interval estimates of the state entry and exit
 distributions will be plotted.
 
 
-For example, the user may plot the normalized state entry time
-distributions for all the non-initial states in the model
-
-<<entryplot1, fig=TRUE, eval=TRUE, include=FALSE>>=
-if(exists("DepEx"))
-    plot(DepEx, plot.type = "entry.norm", states = "ALL")
-@
-or they may choose to plot specific state entry distributions
-<<entryplot2, fig=TRUE, eval=FALSE, include=FALSE>>=
-if(exists("DepEx"))
-    plot(DepEx, plot.type = "entry.norm", states = c("2","3"))
-@
-
-The resulting plot for all non-initial states is given in
-Figure~\ref{fig:entryplot1}.
-
-\begin{figure}[ht]
-\begin{center}
-  \includegraphics[height=5in,width=5in]{"msSurv-entryplot1"}
-  \caption{Plot of normalized state entry time distribution estimates and
-    corresponding confidence intervals for the system
-    illustrated in Figure~\ref{fig:depcensimage}.}
-  \label{fig:entryplot1}
-\end{center}
-\end{figure}
-
-The user may instead plot the normalized state exit time distributions
-for all the non-terminal states in the model
-
-<<exitplot1, fig=TRUE, eval=TRUE, include=FALSE>>=
-if(exists("DepEx"))
-    plot(DepEx, plot.type = "exit.norm")
-@
-or instead plot specific state exit distributions
-
-<<exitplot2, fig=TRUE, eval=FALSE, include=FALSE>>=
-if(exists("DepEx"))
-    plot(DepEx, plot.type = "exit.norm", states = "1")
-@
-The resulting plot for all non-initial states is given in
-Figure~\ref{fig:exitplot1}.
-
-\begin{figure}[ht]
-\begin{center}
-  \includegraphics[height=5in, width=5in]{"msSurv-exitplot1"}
-  \caption{Plot of normalized state exit time distribution estimates for all
-    non-terminal states and corresponding confidence intervals for the
-    system illustrated in Figure~\ref{fig:depcensimage}.}
-  \label{fig:exitplot1}
-\end{center}
-\end{figure}
-
-Default plots produced for transition probabilities plots estimates
+The default plot produced for transition probabilities plots estimates
 and confidence intervals for all possible transitions in the system.
 
-<<ex3transplot, fig=TRUE, eval=TRUE, include=FALSE>>=
+<<DepExTransPlot, fig=TRUE, eval=TRUE, include=FALSE>>=
 if(exists("DepEx"))
     plot(DepEx, plot.type = "transprob")
 @
 
-The resulting plot is given in Figure~\ref{fig:ex3transplot}.
+The resulting plot is given in Figure~\ref{fig:DepExTransPlot}.
 
 Users may specify specific transitions using the \rfarg{trans} argument.  For
 example, if the user wants to plot the transition probabilities for
 the transitions out of state 1, say the \rfarg{"1 2"} and \rfarg{"1 3"} transitions,
 they would type
 
-<<ex3transplot1, fig=TRUE, eval=FALSE, include=FALSE>>=
+<<DepExTransPlot1, fig=TRUE, eval=FALSE, include=FALSE>>=
 if(exists("DepEx"))
     plot(DepEx, plot.type = "transprob", trans = c("1 2", "1 3"))
 @
 
 \begin{figure}[ht]
 \begin{center}
-  \includegraphics[height=5in, width=5in]{"msSurv-ex3transplot"}
+  \includegraphics[height=5in, width=5in]{"msSurv-DepExTransPlot"}
   \caption{Plot of transition probability estimates and their
     corresponding confidence intervals for the system illustrated in
     Figure~\ref{fig:depcensimage}.}
-  \label{fig:ex3transplot}
+  \label{fig:DepExTransPlot}
+\end{center}
+\end{figure}
+
+For state entry / exit distributions, in the current example the
+conditions given for ensuring proper calculation of these distributions  (see
+Section~\ref{subsec:FsGs}) are only satisfied for states 1 and 5.  To
+calculate state entry / exit distributions for the transient states,
+say states 2 and 3, we need to expand the model to differentiate
+between paths to states 4 and 5 that go through state 2 and paths that
+go through state 3.  The expanded system is plotted in
+Figure~\ref{fig:EntryExitDepExStateModel}, where states 4 and 5 have
+been relabeled as 4-2 and 5-2 for paths that go through state 2 and
+4-3 and 5-3 for paths that go through state 3. The data needs to be
+modified correspondingly to incorporate these additional states.  Note
+that individuals who start in state 4 are dropped from this model, as
+these individuals have no impact on the entry / exit distributions
+from states 2 and 3.  The updated tree and data are in objects
+\ro{deptree2} and \ro{data.sdc2}, respectively.
+
+
+%% NEW ADDITIONS HERE
+<<EntryExitDepExData, eval = FALSE, echo = FALSE, results = hide>>=
+## NOTE - For state entry / exit distributions for state j we need to
+##  define states so that only path between states before and after is
+##  THROUGH state j, and no recursion to state j
+if(exists("data.sdc")) {
+    data.sdc2 <- data.sdc
+    data.sdc2$end.stage <- with(data.sdc2, ifelse(start.stage == 3 & end.stage == 4,
+                                                  "4-3", end.stage))
+    data.sdc2$end.stage <- with(data.sdc2, ifelse(start.stage == 3 & end.stage == 5,
+                                                  "5-3", end.stage))
+    data.sdc2$end.stage <- with(data.sdc2, ifelse(start.stage == 2 & end.stage == 4,
+                                                  "4-2", end.stage))
+    data.sdc2$end.stage <- with(data.sdc2, ifelse(start.stage == 2 & end.stage == 5,
+                                                  "5-2", end.stage))
+    ## table(data.sdc2$end.stage)
+    idx <- which(data.sdc2$end.stage == "5")
+    data.sdc2$start.stage[idx] <- data.sdc2$end.stage[(idx-1)]
+    data.sdc2$end.stage[idx] <- with(data.sdc2[idx, ], ifelse(start.stage == "4-3", "5-3", "5-2"))
+
+    ## Drop individuals with start.stage == 4, since has no effect on
+    ##      entry / exit from states 2 and 3
+    idx <- which(data.sdc2$start.stage == "4")
+    data.sdc2 <- data.sdc2[-idx, ]
+
+    Nodes2 <- c("1", "2", "4-2", "5-2", "3", "4-3", "5-3")
+    ## NOTE - edges give the INDEX values of states
+    Edges2 <- list("1" = list(edges = c(2, 5)),  ## states 2, 3
+                   "2" = list(edges = c(3, 4)),  ## states "4-2", "5-2"
+                   "4-2" = list(edges = c(4)),
+                   "5-2" = list(edges = NULL),
+                   "3" = list(edges = c(6, 7)),
+                   "4-3" = list(edges = c(7)),
+                   "5-3" = list(edges = NULL))
+    deptree2 <- new("graphNEL", nodes = Nodes2, edgeL = Edges2,
+                    edgemode = "directed")
+}
+@
+
+<<EntryExitDepExStateModel, fig = TRUE, echo = FALSE, include = FALSE, eval = FALSE>>=
+if(exists("deptree2") & require("Rgraphviz"))
+    plot(deptree2)
+@
+
+\begin{figure}
+  \begin{center}
+    \includegraphics[height=3in,width=3in]{msSurv-EntryExitDepExStateModel.pdf}
+    \caption{Expanded model discussed in Section~\ref{subsec:DepEx},
+      which differentiates between paths to states 4 and 5 that go
+      through state 2 ($2\rightarrow$ 4-2 and $2 \rightarrow$ 5-2) and
+      state 3 ($3\rightarrow$ 4-3 and $2 \rightarrow$ 5-3).}
+    \label{fig:EntryExitDepExStateModel}
+  \end{center}
+\end{figure}
+
+%% NOTE - Change to eval = FALSE after running once to get figures
+The updated model is fitted below, and the normalized state entry
+distribution plots for states 2 and 3 over the time range of 0 to 100
+days are given in Figure~\ref{fig:NormEntryDepExPlot}. The
+corresponding normalized exit distributions are plotted in
+Figure~\ref{fig:NormExitDepExPlot}.  By default (i.e., with the
+\rfarg{states="ALL"} argument) all states where calculation of entry / exit
+distributions is valid are plotted.
+
+
+<<EntryExitDepExFit, echo = TRUE, eval = FALSE>>=
+if(exists("data.sdc2"))
+    DepEx2 <- msSurv(data.sdc2, deptree2, cens.type = "dep", bs = TRUE)
+@
+
+
+<<NormEntryDepExPlot, fig=TRUE, eval=FALSE, include=FALSE>>=
+## Now plot normalized entry distributions for states 2, 3
+if(exists("DepEx2"))
+    plot(DepEx2, plot.type = "entry.norm", states = c("2", "3"),
+         xlim = c(0, 100))
+@
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in, width=5in]{"msSurv-NormEntryDepExPlot"}
+  \caption{Plot of normalized state entry time distribution estimates
+    and corresponding confidence intervals for states 2 and 3 in the
+    system initially illustrated in Figure~\ref{fig:depcensimage} and expanded
+    in Figure~\ref{fig:EntryExitDepExStateModel}.}
+  \label{fig:NormEntryDepExPlot}
+\end{center}
+\end{figure}
+
+<<NormExitDepExPlot, fig=TRUE, eval=FALSE, include=FALSE>>=
+## Now plot normalized exit distributions for states 2, 3
+if(exists("DepEx2"))
+    plot(DepEx2, plot.type = "exit.norm", states = c("2", "3"))
+## Note that while normalized entry distributions will by
+##  definition -> 1 as t -> infty, the normalized exit distributions
+##  need not do this (e.g., if some individuals are never observed to
+##  transition out of that state)
+@
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in, width=5in]{"msSurv-NormExitDepExPlot"}
+  \caption{Plot of normalized state exit time distribution estimates
+    and corresponding confidence intervals for states 2 and 3 in the
+    system initially illustrated in Figure~\ref{fig:depcensimage} and expanded
+    in Figure~\ref{fig:EntryExitDepExStateModel}.}
+  \label{fig:NormExitDepExPlot}
 \end{center}
 \end{figure}
 
@@ -1223,21 +1297,246 @@ if(exists("DepEx"))
 To illustrate how to integrate the information in the various
 estimates, we describe a clinical interpretation of the data.
 Starting from state 1, nearly all of the patients transition to either
-state 2 (acute GVHD) or state 3 (normal platelets) by day 100.    By
+state 2 (acute GVHD) or state 3 (normal platelets) by day 100
+(c.f.~Figures~\ref{fig:DepExSOP} and \ref{fig:NormEntryDepExPlot}).    By
 70 days post-transplant, roughly 75\% of the patients have had their
-platelet levels return to normal before development of acute GVHD. The
-entry time distribution for state 3 reaches 1.0 by 100 days,
+platelet levels return to normal before development of acute GVHD (Figure~\ref{fig:DepExSOP}).
+The normalized entry time distribution for state 3 reaches
+approximately 1.0 by 100 days,
 indicating patients whose platelet levels return to normal prior to
 development of acute GVHD tend to do so within the first 100 days.
-About 40\% of these patients never develop GVHD (remain in state 3),
-with a small percentage subsequently developing acute GHVD and 60\%
-eventually going on to develop chronic GVHD.   A much smaller
-percentage of patients first develop acute GVHD, with about 40\% of
-these eventually having their platelet levels returning to normal.
+About 40\% of these patients never develop GVHD (remain in state 3,
+Figure~\ref{fig:NormExitDepExPlot}),
+with a small percentage subsequently developing acute GHVD
+($3\rightarrow 4$ transition in Figure~\ref{fig:DepExTransPlot}) and 60\%
+eventually going on to develop chronic GVHD ($3\rightarrow 5$
+transition in Figure~\ref{fig:DepExTransPlot}). A much smaller
+percentage of patients first develop acute GVHD ($1\rightarrow 2$
+transition in Figure~\ref{fig:DepExTransPlot}), with about 40\% of
+these having their platelet levels returning to normal by 70-80 days
+(peak of $2\rightarrow 4$ transition in Figure~\ref{fig:DepExTransPlot}).
 All of the patients who develop acute GVHD first eventually go on to
-develop chronic GVHD.
+develop chronic GVHD ($2\rightarrow 5$ transition in
+Figure~\ref{fig:DepExTransPlot}).
 
 
+\subsection{An illustration of state-dependent censoring using simulated
+  data}
+\label{subsec:stateDepIllDeath}
+
+In the previous example based on real data the dependency of the
+censoring distribution on the state in the system was not too heavy,
+and the difference between estimates assuming state-dependent and
+state-independent censoring was relatively minor (data not shown).
+In this example we illustrate the magnitude of the difference between
+the two estimates that can
+occur using simulated data in the same spirit as \citet{DS2002}.
+% the difference between the
+% Aalen-Johansen and Datta-Satten (assuming state-dependent censoring) estimates
+Data were simulated from a three state irreversible
+illness-death model, where all individuals begin in state 1 (well) at time 0.
+Individuals in state 1 may subsequently transition to state 2
+(illness) or state 3 (death).  Individuals
+with illness remain in state 2 until death (entry
+into state 3). For each individual, a vector $W = (W_l, W_2,
+W_3)$ was generated from a trivariate normal distribution with
+mean vector (1.81, 1.7, 1.7) and variance-covariance matrix $0.393 \times
+(0.01\textnormal{\textbf{I}} + 0.91\mathbf{1}\mathbf{1}^T)$, where
+\textbf{I} is the identity matrix and $\mathbf{1}$ is
+a $3\times 1$ vector of ones. The values
+of $W$ are (log) latent transition times with the following possible
+transition paths:
+\begin{description}
+  \item[$W_1 < W_2$:] Death occurs before illness at time
+    $\exp(W_1)$
+  \item[$W_2 < W_1$:] Illness occurs at time $\exp(W_2)$ and
+    death at time $\exp(W_2) + \exp(W_3)$
+\end{description}
+The hazard for censoring was state dependent with censoring times
+following a Weibull distribution. In state 1, the censoring hazard was
+$t^{1/4}/60$, while in state 2 the censoring hazard was $t/50$.
+For each observation, a state 1 censoring time $C_1$ was generated and
+if $C_1 < \textnormal{min}\{\exp(W_l), \exp(W_2)\}$ the observation was
+censored in state 1.  If $\exp(W_2) < C_1$ and if state 2 was
+entered, then a state 2 censoring time was generated from the
+Weibull distribution conditional on $C_2 > \exp(W_2)$.  Simulations
+were based on a single data set of 1000 subjects.
+Figure~\ref{fig:stateDepIllDeath} illustrates the state 2 occupation
+probability estimates based on
+the complete (non-censored) data, the Aalen-Johansen estimates, and
+the Datta-Satten estimates assuming state-dependent censoring.  The
+Datta-Satten estimates closely follow the empirical estimates based on
+non-censored data, while the Aalen-Johansen estimates deviate
+appreciably.
+
+
+<<StateDependentCensoringIllnessDeath, eval=FALSE, echo=FALSE, results=hide>>=
+
+library("MASS")  ## only needed for mvrnorm function
+
+####################################################################
+## Simulation based on Datta and Satten 2002 Biometrics paper
+####################################################################
+
+## 3-state illness-death model
+Nodes <- c("1", "2", "3")
+Edges <- list("1"=list(edges=c("2", "3")), "2"=list(edges=c("3")),
+           "3"=list(edges=NULL))
+SDCtree <- new("graphNEL", nodes=Nodes, edgeL=Edges, edgemode="directed")
+
+
+samp.size <- 1000
+mu <- c(1.81, 1.7, 1.7)
+cov <- matrix(0.91, 3, 3)
+diag(cov) <- rep(0.92, 3)
+cov <- 0.393*cov
+set.seed(101)
+data <- mvrnorm(samp.size, mu, cov)
+## w1, w2, w3,
+## if exp(w1) < exp(w2) -> death before illness at time exp(w1)
+## else illness at time exp(w2) and death at time exp(w1) + exp(w2)
+
+data <- as.data.frame(data)
+names(data) <- c("w1", "w2", "w3")
+idx <- which(data$w1 < data$w2)
+data13 <- data.frame(id=idx, stop=exp(data$w1[idx]), start.stage=1, end.stage=3)
+
+## now folks with illness ...
+idx <- which(data$w1 > data$w2)
+data12 <- data.frame(id = idx, stop = exp(data$w2[idx]), start.stage = 1, end.stage = 2)
+data23 <- data.frame(id = idx, stop = exp(data$w2[idx]) + exp(data$w3[idx]), start.stage = 2, end.stage = 3)
+
+data.nocens <- rbind(data13, data12, data23)
+data.nocens <- data.nocens[order(data.nocens$id, data.nocens$stop), ]
+
+## no censoring estimates
+est.nocens <- msSurv(data.nocens, SDCtree)
+
+
+####################################################################
+## Now incorporate censoring ...
+## Weibull distribution:
+####################################################################
+
+####################################################################
+## State 1: hazard = t^(1/4)/60
+####################################################################
+## In R notation:
+## a = shape = 1+1/4
+## b = scale = (a*den)^1/a, where den = 60
+a <- 1+1/4
+den <- 60
+
+c1 <- rweibull(samp.size, shape = a, scale = (a*den)^(1/a))
+idx <- which(c1 < pmin(exp(data$w1), exp(data$w2)))
+length(idx)/samp.size
+## ~13%
+
+####################################################################
+## State 2: hazard = t/50
+####################################################################
+
+a <- 2    ## shape
+den <- 50 ## "adjustment" = denominator of hazard
+## NOTE - Need to sample from TRUNCATED distribution
+##        Use inverse-transform method
+## Just generate uniform restricted to cdf at truncation point to 1,
+##       then take inverse CDF at that point ...
+idx <- which(exp(data$w2) < pmin(c1, exp(data$w1)))
+lower <- pweibull(exp(data$w2)[idx], shape = a, scale = (a*den)^(1/a))
+u <- runif(length(idx), lower, 1)
+c2 <- qweibull(u, shape = a, scale = (a*den)^(1/a))
+
+idx2 <- which(c2 < (exp(data$w2)[idx] + exp(data$w3)[idx]))
+length(idx2)/length(idx)
+## ~58.5%
+
+
+## Now incorporate censoring
+
+## 1->0
+idx <- which(c1 < pmin(exp(data$w1), exp(data$w2)))
+## 130 = 13%
+data10 <- data.frame(id=idx, start = 0, stop=c1[idx], start.stage=1, end.stage=0)
+
+## 1->3
+idx <- which(exp(data$w1) < pmin(c1, exp(data$w2)))
+data13 <- data.frame(id=idx, start = 0, stop=exp(data$w1[idx]), start.stage=1, end.stage=3)
+
+## 1->2
+idx <- which(exp(data$w2) < pmin(c1, exp(data$w1)))
+data12 <- data.frame(id=idx, start = 0, stop=exp(data$w2[idx]), start.stage=1, end.stage=2)
+
+## 2->0 (censored in stage 2)
+idx <- which(exp(data$w2) < pmin(c1, exp(data$w1)))
+sum(c2 > exp(data$w2)[idx])  ## everyone
+idx2 <- which(c2 < (exp(data$w2)[idx] + exp(data$w3)[idx]))
+length(idx2)/length(idx)
+## ~58.5%
+data20 <- data.frame(id=idx[idx2], start=exp(data$w2[idx][idx2]), stop = c2[idx2], start.stage=2, end.stage=0)
+
+## 2->3
+idx2 <- which(c2 > (exp(data$w2)[idx] + exp(data$w3)[idx]))
+data23 <- data.frame(id = idx[idx2], start=exp(data$w2[idx][idx2]),
+                     stop = exp(data$w2[idx][idx2]) + exp(data$w3[idx][idx2]),
+                     start.stage = 2, end.stage = 3)
+
+
+data.cens <- rbind(data10, data13, data12, data20, data23)
+data.cens <- data.cens[order(data.cens$id, data.cens$stop), ]
+
+
+####################################################################
+## Assuming independence
+####################################################################
+est.ind <- msSurv(data.cens, SDCtree)
+
+
+####################################################################
+## Assuming dependence
+####################################################################
+est.dep <- msSurv(data.cens, SDCtree, cens = "dep")
+
+@
+
+
+<<StateDependentCensoringIllnessDeathPlot, fig=TRUE, eval=FALSE, include=FALSE, echo=FALSE>>=
+####################################################################
+## PLOT of STATE 2 OCCUPATION PROBABILITY
+####################################################################
+
+
+## All on same graph
+s2.ind <- ps(est.ind)[,2]
+s2.nocens <- ps(est.nocens)[,2]
+s2.dep <- ps(est.dep)[,2]
+
+t.ind <- et(est.ind)
+t.nocens <- et(est.nocens)
+t.dep <- et(est.dep)
+
+plot(t.nocens, s2.nocens, type = "s", xlim = c(0, 50),
+     ylab = "Probability", xlab = "Time",
+     main = "State 2 occupation probability")
+lines(t.ind, s2.ind, col = 2, type = "s")
+lines(t.dep, s2.dep, col = 3, type = "s")
+legend("topright", c("No censoring", "AJ - Independent", "DS - Dependent"),
+       lty = 1, col = 1:3, bty = "n")
+
+@
+
+\begin{figure}[ht]
+\begin{center}
+  \includegraphics[height=5in,width=5in]{"msSurv-StateDependentCensoringIllnessDeathPlot"}
+  \caption{Plot of state 2 occupation probabilities for the
+    three-state irreversible illness-death model in
+    Section~\ref{subsec:stateDepIllDeath}. The Datta-Satten (DS)
+    estimator closely follows the empirical estimator based on
+    complete (non-censored) data, while the Aalen-Johansen (AJ)
+    estimator deviates noticeably. }
+  \label{fig:stateDepIllDeath}
+\end{center}
+\end{figure}
 
 \section{Discussion}
 \label{sec:discussion}
