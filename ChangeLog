@@ -1,4 +1,13 @@
 -------------------
+Version: 1.2-2
+Date: 2015-04-10
+
+	* Fixed bug when no eligible states for state entry and/or exit
+	distributions. 
+	* Fixed bug for plotting state occupation probabilities when state
+	names are character not numeric. 	
+
+-------------------
 Version: 1.2-0
 Date: 2015-02-26
 

@@ -1,9 +1,9 @@
-6b8610e0b60877a0b7b13762b8c80e4f *ChangeLog
-7001ae74913dccd0421a95225b11b8aa *DESCRIPTION
+84a25d5c3a735ebdebe63879d8f1b455 *ChangeLog
+e7f0a8b7322cd7639f41b9861548ce8b *DESCRIPTION
 d53afec4c2401597be151089b457a74b *NAMESPACE
 699346b000693d43e7e9242f4a26ec94 *R/msSurv-Classes.R
-e799bbb2f886c23364ba0d0850816cb2 *R/msSurv-Methods.R
-54ac89d53ee12af38cf4cb90e8b45c8a *R/msSurv-internal.R
+bda1db6804d573eac95d1eba85c75aa0 *R/msSurv-Methods.R
+6633ff53ade4627ac50e3591df2bdd29 *R/msSurv-internal.R
 359c5005e9030742eea2e14a59367438 *R/msSurv-user.R
 53a2e1523bbeb8cea47b0c14c15cdc5c *build/vignette.rds
 864fcfd68c071e0d2dbcaf67ffa98883 *data/LTRCdata.rda

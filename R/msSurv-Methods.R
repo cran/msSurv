@@ -468,7 +468,7 @@ setMethod("plot", signature(x="msSurv", y="missing"),
 
                   ## f.st <- factor(states)
                   ## ls <- length(states)
-                  sl <- which(nodes(tree(x))%in%as.numeric(states)) ## location of states in the matrix
+                  sl <- which(nodes(tree(x))%in%states) ## location of states in the matrix
 
                   if (CI==TRUE & !is.null(var.sop(x))) {
                       CIs <- MSM.CIs(x, ci.level=0.95) ## Calling CIs

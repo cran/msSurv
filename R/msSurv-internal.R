@@ -550,13 +550,23 @@ Dist <- function(ps, ns, tree) {
     Gs.states <- which(!sapply(edges(tree), function(x) !length(x)>0) & est.states)
     ## NOTE - Fs.states and Gs.states give POSITION of node
 
-    Fnorm <- Fsub <- matrix(0, nrow=nrow(ps), ncol=length(Fs.states)) ## entry distn
-    rownames(Fnorm) <- rownames(Fsub) <- rownames(ps)
-    colnames(Fnorm) <- colnames(Fsub) <- paste("F", nodes(tree)[Fs.states])
+    if (length(Fs.states) > 0) {
+        Fnorm <- Fsub <- matrix(0, nrow=nrow(ps), ncol=length(Fs.states)) ## entry distn
+        rownames(Fnorm) <- rownames(Fsub) <- rownames(ps)
+        colnames(Fnorm) <- colnames(Fsub) <- paste("F", nodes(tree)[Fs.states])
+    } else {
+        cat("\nNo states eligible for entry distribution calculation.\n")
+        Fsub <- Fnorm <- NULL
+    }
 
-    Gsub <- Gnorm <- matrix(0, nrow=nrow(ps), ncol=length(Gs.states)) ## exit distn
-    rownames(Gnorm) <- rownames(Gsub) <- rownames(ps)
-    colnames(Gnorm) <- colnames(Gsub) <- paste("G", nodes(tree)[Gs.states])
+    if (length(Gs.states) > 0) {
+        Gsub <- Gnorm <- matrix(0, nrow=nrow(ps), ncol=length(Gs.states)) ## exit distn
+        rownames(Gnorm) <- rownames(Gsub) <- rownames(ps)
+        colnames(Gnorm) <- colnames(Gsub) <- paste("G", nodes(tree)[Gs.states])
+    } else {
+        cat("\nNo states eligible for exit distribution calculation.\n")
+        Gsub <- Gnorm <- NULL
+    }
 
     ## Fs (entry dist) calculation
     if (length(Fs.states) > 0) {
@@ -569,9 +579,6 @@ Dist <- function(ps, ns, tree) {
             Fsub[, i] <- f.numer <- rowSums(ps[, paste("p", stages), drop=FALSE])
             Fnorm[, i] <- f.numer/f.numer[length(f.numer)]
         }
-    } else {
-        cat("\nNo states eligible for entry distribution calculation.\n")
-        Fsub <- Fnorm <- NULL
     }
 
     ## Gs (exit dist) calculation
@@ -586,9 +593,6 @@ Dist <- function(ps, ns, tree) {
             Gsub[, i] <- g.numer <- rowSums(ps[, paste("p", later.stages), drop=FALSE])
             Gnorm[, i] <- g.numer/f.numer[length(f.numer)]
         }
-    } else {
-        cat("\nNo states eligible for exit distribution calculation.\n")
-        Gsub <- Gnorm <- NULL
     }
 
     list(Fnorm=Fnorm, Gsub=Gsub, Fsub=Fsub, Gnorm=Gnorm)
